@@ -357,15 +357,33 @@
       }
       .btn-secundario:hover { background: #daf0e1; }
 
-      /* --- SKELETON LOADER --- */
+      /* --- SKELETON LOADER (MEJORADO CON TEXTO Y SPINNER) --- */
       .skeleton-box {
-        display: inline-block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
         height: 52px;
         width: 100%;
         position: relative;
         overflow: hidden;
         background-color: #e5e5ea;
         border-radius: 14px;
+        color: #6e6e73;
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+      .sk-spinner {
+        width: 18px;
+        height: 18px;
+        border: 2.5px solid rgba(110, 110, 115, 0.3);
+        border-top-color: #6e6e73;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        z-index: 2;
+      }
+      .sk-text {
+        z-index: 2;
       }
       .skeleton-box::after {
         position: absolute;
@@ -374,8 +392,10 @@
         background-image: linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%);
         animation: shimmer 1.3s infinite;
         content: '';
+        z-index: 1;
       }
       @keyframes shimmer { 100% { transform: translateX(100%); } }
+      @keyframes spin { 100% { transform: rotate(360deg); } }
 
       /* --- BADGE DE SINCRONIZACIÓN EN LA NUBE --- */
       .upload-badge {
@@ -754,7 +774,10 @@
           </div>
 
           <div class="separador"></div>
-          <div id="skeleton-validacion" class="skeleton-box hidden"></div>
+          <div id="skeleton-validacion" class="skeleton-box hidden">
+            <div class="sk-spinner"></div>
+            <span class="sk-text">Validando identidad...</span>
+          </div>
           <button id="btn-validar-cliente" class="btn-accion" onclick="validarClienteFormulario()">
             Continuar <i class="fas fa-arrow-right"></i>
           </button>
@@ -774,7 +797,10 @@
               Enviaremos un código de verificación de 6 dígitos al correo:<br>
               <strong id="correo-enviar-mostrar" style="color: var(--text-main); font-size: 1.05rem;"></strong>
             </p>
-            <div id="skeleton-otp-send" class="skeleton-box hidden"></div>
+            <div id="skeleton-otp-send" class="skeleton-box hidden">
+              <div class="sk-spinner"></div>
+              <span class="sk-text">Enviando código...</span>
+            </div>
             <button class="btn-accion" id="btn-enviar-codigo" onclick="solicitarOTP()">
               Enviar código por correo <i class="fas fa-paper-plane"></i>
             </button>
@@ -790,7 +816,10 @@
               <label style="text-align: center;">Ingresa los 6 dígitos</label>
               <input type="text" id="otp-input" class="form-control" inputmode="numeric" placeholder="000000" maxlength="6" style="letter-spacing: 10px; text-align: center; font-size: 1.6rem; font-weight: 700;">
             </div>
-            <div id="skeleton-otp-verify" class="skeleton-box hidden"></div>
+            <div id="skeleton-otp-verify" class="skeleton-box hidden">
+              <div class="sk-spinner"></div>
+              <span class="sk-text">Verificando...</span>
+            </div>
             <button class="btn-accion" id="btn-verificar-codigo" onclick="confirmarOTP()">
               Verificar código <i class="fas fa-check-circle"></i>
             </button>
@@ -821,7 +850,7 @@
           </button>
         </div>
 
-        <!-- ================= VISTA 3: AVISO DE PRIVACIDAD 1 (FIRMA BIOMÉTRICA 5 ÁNGULOS) ================= -->
+        <!-- ================= VISTA 3: AVISO DE PRIVACIDAD 1 (FIRMA BIOMÉTRICA) ================= -->
         <div id="vista-privacidad-1" class="view-body fade-in hidden">
           <button class="btn-regresar" onclick="cambiarVista('vista-validacion')">
             <i class="fas fa-chevron-left"></i> Validación
@@ -862,15 +891,82 @@
           </div>
           
           <div class="separador"></div>
-          <button class="btn-accion" onclick="avanzarDatosContacto()">
+          <!-- AHORA AVANZA A LOS DATOS PERSONALES PRIMERO -->
+          <button class="btn-accion" onclick="avanzarDatosPersonales()">
             Aceptar y Continuar <i class="fas fa-arrow-right"></i>
           </button>
         </div>
 
-        <!-- ================= VISTA 4: DATOS DE CONTACTO ================= -->
-        <div id="vista-datos-contacto" class="view-body fade-in hidden">
+        <!-- ================= VISTA 3.5: DATOS PERSONALES ================= -->
+        <div id="vista-datos-personales" class="view-body fade-in hidden">
           <button class="btn-regresar" onclick="cambiarVista('vista-privacidad-1')">
             <i class="fas fa-chevron-left"></i> Firma Inicial
+          </button>
+          
+          <p style="background: var(--verde-jara-light); color: #1b4d29; padding: 12px 16px; border-radius: 12px; font-size: 0.88rem; font-weight: 600; margin-bottom: 20px;">
+            <i class="fas fa-user-shield"></i> Para tu seguridad, verificaremos tu identidad y registro nacional.
+          </p>
+
+          <div class="form-group">
+            <label>Nombre(s)</label>
+            <input type="text" id="nombres" class="form-control" placeholder="Ej. JUAN CARLOS" required>
+          </div>
+          
+          <div class="grid-2-col">
+            <div class="form-group">
+              <label>Apellido paterno</label>
+              <input type="text" id="apellido_paterno" class="form-control" placeholder="Ej. PEREZ" disabled required>
+            </div>
+            <div class="form-group">
+              <label>Apellido materno</label>
+              <input type="text" id="apellido_materno" class="form-control" placeholder="Ej. LOPEZ" disabled required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>CURP</label>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="curp" class="form-control" maxlength="18" placeholder="18 caracteres" style="text-transform: uppercase;" disabled required>
+              <button class="btn-accion btn-secundario" id="btn_validar_curp" onclick="procesarCURP()" style="width: auto; padding: 0 16px;" disabled>Validar</button>
+            </div>
+          </div>
+
+          <div id="skeleton-curp" class="skeleton-box hidden" style="margin-bottom: 18px;">
+            <div class="sk-spinner"></div>
+            <span class="sk-text">Validando identidad...</span>
+          </div>
+
+          <div class="form-group">
+            <label>Nombre Completo</label>
+            <input type="text" id="nombre_completo" class="form-control" readonly disabled>
+          </div>
+
+          <div class="grid-2-col">
+            <div class="form-group">
+              <label>RFC</label>
+              <input type="text" id="rfc" class="form-control" readonly disabled>
+            </div>
+            <div class="form-group">
+              <label>Fecha de Nacimiento</label>
+              <input type="text" id="fecha_nac_calc" class="form-control" placeholder="DD/MM/AAAA" readonly disabled>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Sexo</label>
+            <input type="text" id="sexo" class="form-control" readonly disabled>
+          </div>
+
+          <div class="separador"></div>
+          <button class="btn-accion" onclick="avanzarDatosContacto()">
+            Siguiente: Domicilio <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+
+        <!-- ================= VISTA 4: DATOS DE CONTACTO / DOMICILIO ================= -->
+        <div id="vista-datos-contacto" class="view-body fade-in hidden">
+          <button class="btn-regresar" onclick="cambiarVista('vista-datos-personales')">
+            <i class="fas fa-chevron-left"></i> Datos Personales
           </button>
 
           <p style="background: var(--verde-jara-light); color: #1b4d29; padding: 12px 16px; border-radius: 12px; font-size: 0.88rem; font-weight: 600; margin-bottom: 20px;">
@@ -902,51 +998,62 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Estado</label>
-              <select id="estado" class="form-control" disabled required>
-                <option value="">Seleccione un estado</option>
-              </select>
+              <label>Código Postal</label>
+              <div style="display: flex; gap: 10px;">
+                <input type="text" id="codigoPostal" inputmode="numeric" maxlength="5" class="form-control" placeholder="Ej. 80000" disabled required>
+                <button class="btn-accion btn-secundario" id="btn_validar_cp" onclick="validarCP()" style="width: auto; padding: 0 16px;" disabled>Validar</button>
+              </div>
             </div>
           </div>
 
+          <div id="skeleton-cp" class="skeleton-box hidden" style="margin-bottom: 18px;">
+            <div class="sk-spinner"></div>
+            <span class="sk-text">Buscando código postal...</span>
+          </div>
+
           <div class="grid-2-col">
+            <div class="form-group">
+              <label>Estado</label>
+              <input type="text" id="estado" class="form-control" readonly disabled required>
+            </div>
             <div class="form-group">
               <label>Ciudad / Municipio</label>
-              <select id="ciudad" class="form-control" disabled required>
-                <option value="">Seleccione una ciudad</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Colonia</label>
-              <input type="text" id="colonia" list="coloniasCuliacan" class="form-control" placeholder="Escribe o selecciona tu colonia" disabled required>
-              <datalist id="coloniasCuliacan"></datalist>
+              <input type="text" id="ciudad" class="form-control" readonly disabled required>
             </div>
           </div>
 
           <div class="grid-2-col">
             <div class="form-group">
-              <label>Calle</label>
-              <input type="text" id="calle" class="form-control" placeholder="Nombre de la calle" required>
+              <label>Colonia</label>
+              <select id="colonia" class="form-control" disabled required>
+                <option value="">Esperando validación...</option>
+              </select>
             </div>
             <div class="form-group">
-              <label>Número exterior / interior</label>
-              <input type="text" id="numeroCasa" class="form-control" placeholder="Ej. 1831 o S/N" required>
+              <label>Calle</label>
+              <input type="text" id="calle" class="form-control" placeholder="Nombre de la calle" disabled required>
+            </div>
+          </div>
+
+          <div class="grid-2-col">
+            <div class="form-group">
+              <label>Número exterior</label>
+              <input type="text" id="numeroCasa" class="form-control" placeholder="Ej. 1831 o S/N" disabled required>
+            </div>
+            <div class="form-group">
+              <label>Número interior</label>
+              <input type="text" id="numeroInterior" class="form-control" placeholder="Opcional" disabled>
             </div>
           </div>
 
           <div class="form-group">
             <label>Entre calles</label>
-            <input type="text" id="entreCalles" class="form-control" placeholder="Ej. Entre Av. Insurgentes y Calle 2" required>
+            <input type="text" id="entreCalles" class="form-control" placeholder="Ej. Entre Av. Insurgentes y Calle 2" disabled required>
           </div>
 
           <div class="form-group">
             <label>Referencias del domicilio (color de fachada, portón, etc.)</label>
-            <input type="text" id="referenciasDomicilio" class="form-control" placeholder="Ej. Casa blanca de dos pisos frente al parque" required>
-          </div>
-
-          <div class="form-group">
-            <label>Código Postal</label>
-            <input type="text" id="codigoPostal" inputmode="numeric" maxlength="5" oninput="soloNumeros(this)" class="form-control" placeholder="Ej. 80000" style="max-width: 200px;" required>
+            <input type="text" id="referenciasDomicilio" class="form-control" placeholder="Ej. Casa blanca de dos pisos frente al parque" disabled required>
           </div>
 
           <div class="separador"></div>
@@ -1204,7 +1311,10 @@
           </div>
 
           <div class="separador"></div>
-          <div id="skeleton-envio-final" class="skeleton-box hidden"></div>
+          <div id="skeleton-envio-final" class="skeleton-box hidden">
+            <div class="sk-spinner"></div>
+            <span class="sk-text">Guardando expediente...</span>
+          </div>
           <button id="btn-enviar-final" class="btn-accion" onclick="enviarActualizacionFinal()">
             <i class="fas fa-paper-plane"></i> Finalizar y Enviar Solicitud
           </button>
@@ -1218,7 +1328,6 @@
          MODAL INMERSIVO PANTALLA COMPLETA (BIOMETRÍA FACE ID & ESCÁNER DOCUMENTOS)
          ========================================================================== -->
     <div id="scannerOverlayModal" class="scanner-overlay-modal hidden">
-      <!-- Encabezado Curvo idéntico a tus imágenes de referencia -->
       <header class="top-brand-bar">
         <div class="top-brand-title">PrestaJara</div>
       </header>
@@ -1237,13 +1346,11 @@
           <div id="faceCircleViewport" class="face-circle-viewport">
             <video id="videoScannerFace" autoplay playsinline muted></video>
             
-            <!-- Píldora flotante de instrucciones dentro del círculo -->
             <div id="faceFloatingPill" class="floating-pill-prompt centered-text">
               <i id="facePillIcon" class="fas fa-arrow-down hidden"></i>
               <span id="facePillText">Iniciando cámara...</span>
             </div>
 
-            <!-- Pantalla de éxito animada (Checkmark Verde) -->
             <div id="faceSuccessCover" class="face-success-cover">
               <svg class="checkmark-svg" viewBox="0 0 52 52">
                 <path class="checkmark-path" d="M14 27l8 8 16-16"></path>
@@ -1257,12 +1364,10 @@
           <div id="docViewportFrame" class="doc-viewport-frame">
             <video id="videoScannerDoc" autoplay playsinline muted></video>
 
-            <!-- Píldora flotante para documento -->
             <div id="docFloatingPill" class="floating-pill-prompt">
               <span id="docPillText">Centra el documento en el marco</span>
             </div>
 
-            <!-- Overlay de éxito al capturar documento -->
             <div id="docSuccessCover" class="face-success-cover" style="border-radius: 14px;">
               <svg class="checkmark-svg" viewBox="0 0 52 52">
                 <path class="checkmark-path" d="M14 27l8 8 16-16"></path>
@@ -1273,7 +1378,6 @@
 
         <canvas id="hiddenCaptureCanvas" class="hidden"></canvas>
 
-        <!-- Controles inferiores limpios -->
         <div class="scanner-footer-controls">
           <button type="button" id="btnManualCaptureScanner" class="btn-accion hidden" style="flex: 1;">
             <i class="fas fa-camera"></i> Capturar ahora
@@ -1288,12 +1392,15 @@
     <script>
       // ================= URL DE TU GOOGLE APPS SCRIPT =================
       const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwmNc-gL509pgAD_LUcKGU2IeoB01Em_ObpTEEMyED6PRd8K67E7vJfy9PKzT3_7jqh/exec';
-      const SESSION_STORAGE_KEY = 'PRESTAJARA_ACTUALIZACION_STATE_V3';
+      const SESSION_STORAGE_KEY = 'PRESTAJARA_ACTUALIZACION_STATE_V4'; // Actualizado para versión 4
 
-      // ================= ESTADOS GLOBALES Y DATOS (CON 5 ÁNGULOS BIOMÉTRICOS) =================
+      // ================= ESTADOS GLOBALES Y DATOS =================
       let solicitudData = { 
         email: '', numCliente: '', fechaNac: '', nombreCompleto: '', paisRegistrado: '', 
-        telefono: '', pais: '', estado: '', ciudad: '', colonia: '', calle: '', numeroCasa: '', entreCalles: '', referenciasDomicilio: '', codigoPostal: '', diasContacto: '', horarioDe: '', horarioA: '', tipoCasa: '', otraCasa: '', 
+        // NUEVOS DATOS PERSONALES
+        nombres: '', apellidoPaterno: '', apellidoMaterno: '', curp: '', rfc: '', sexo: '',
+        // DIRECCIÓN Y CONTACTO ACTUALIZADOS
+        telefono: '', pais: '', estado: '', ciudad: '', colonia: '', calle: '', numeroCasa: '', numeroInterior: '', entreCalles: '', referenciasDomicilio: '', codigoPostal: '', diasContacto: '', horarioDe: '', horarioA: '', tipoCasa: '', otraCasa: '', 
         ref1Nombre: '', ref1Apellidos: '', ref1Parentesco: '', ref1OtroParentesco: '', ref1Telefono: '', ref1Tiempo: '', ref1CalleNum: '', ref1Colonia: '', ref1CiuEst: '', 
         ref2Nombre: '', ref2Apellidos: '', ref2Parentesco: '', ref2OtroParentesco: '', ref2Telefono: '', ref2Tiempo: '', ref2CalleNum: '', ref2Colonia: '', ref2CiuEst: '', 
         // Selfie Inicial (Frente + 4 Movimientos)
@@ -1313,10 +1420,14 @@
       
       let textoCaptchaActual = ''; 
       let activeCamStream = null; 
-      let activeScannerMode = null; // 'bio5', 'selfieFinal', 'frontal', 'trasera', 'comprobante'
+      let activeScannerMode = null; 
       let pendingUploads = {};
 
-      // VARIABLES DE IA (TINY FACE + 68 LANDMARKS PARA CABEZA) Y ESTABILIDAD
+      // Variables de validación local
+      let curpValidada = false;
+      let cpValidado = false;
+
+      // VARIABLES DE IA Y ESTABILIDAD
       let isFaceApiLoaded = false;
       let isFaceApiLoading = false;
       let isDetectionRunning = false;
@@ -1330,38 +1441,97 @@
 
       // TÍTULOS DINÁMICOS DEL BANNER AZUL HIELO POR VISTA
       const VIEW_BANNERS = {
-        'vista-menu':             { pct: 12, title: 'Actualización de datos', sub: 'Verifica y actualiza tu expediente digital de forma rápida y segura.' },
-        'vista-validacion':       { pct: 24, title: 'Validación de identidad', sub: 'Ingresa tus datos registrados para localizar tu cuenta.' },
-        'vista-otp':              { pct: 36, title: 'Verificación de seguridad', sub: 'Confirma tu correo electrónico con el código de 6 dígitos.' },
-        'vista-correo-manual':    { pct: 36, title: 'Verificación de seguridad', sub: 'Completa el código visual para continuar.' },
-        'vista-privacidad-1':     { pct: 50, title: 'Aviso de Privacidad', sub: 'Firma biométrica mediante reconocimiento facial en vivo.' },
-        'vista-datos-contacto':   { pct: 64, title: 'Datos personales y domicilio', sub: 'Completa tu dirección actual y horarios de localización.' },
-        'vista-documentos':       { pct: 78, title: 'Identificación y Comprobante', sub: 'Captura tu INE por ambos lados y tu comprobante de domicilio.' },
+        'vista-menu':             { pct: 10, title: 'Actualización de datos', sub: 'Verifica y actualiza tu expediente digital de forma rápida y segura.' },
+        'vista-validacion':       { pct: 20, title: 'Validación de identidad', sub: 'Ingresa tus datos registrados para localizar tu cuenta.' },
+        'vista-otp':              { pct: 30, title: 'Verificación de seguridad', sub: 'Confirma tu correo electrónico con el código de 6 dígitos.' },
+        'vista-correo-manual':    { pct: 30, title: 'Verificación de seguridad', sub: 'Completa el código visual para continuar.' },
+        'vista-privacidad-1':     { pct: 45, title: 'Aviso de Privacidad', sub: 'Firma biométrica mediante reconocimiento facial en vivo.' },
+        'vista-datos-personales': { pct: 55, title: 'Datos personales', sub: 'Validaremos tu identidad oficial con base en tu CURP.' },
+        'vista-datos-contacto':   { pct: 68, title: 'Domicilio y contacto', sub: 'Completa tu dirección actual y horarios de localización.' },
+        'vista-documentos':       { pct: 80, title: 'Identificación y Comprobante', sub: 'Captura tu INE por ambos lados y tu comprobante de domicilio.' },
         'vista-referencias':      { pct: 90, title: 'Referencias personales', sub: 'Registra 2 contactos de referencia.' },
         'vista-privacidad-final': { pct: 100, title: 'Aceptación de solicitud', sub: 'Toma tu selfie final para concluir tu trámite.' }
       };
 
-      // ================= DATA DE UBICACIONES =================
-      const datosUbicacion = {
-        "México": {
-          "Sinaloa": ["Ahome", "Angostura", "Badiraguato", "Choix", "Concordia", "Cosalá", "Culiacán", "El Fuerte", "Elota", "Escuinapa", "Guasave", "Mazatlán", "Mocorito", "Rosario", "Salvador Alvarado", "San Ignacio", "Sinaloa", "Navolato", "Juan José Ríos", "Eldorado"],
-          "Durango": ["Victoria de durango"],
-          "Tijuana": ["Centro"]
-        },
-        "España": {
-          "Madrid": ["Prueba"], "Canarias": ["Prueba"], "Cataluña": ["Prueba"]
-        }
-      };
-      const coloniasCuliacan = ["6 de Enero", "7 Gotas", "Abasto", "Adolfo López Mateos", "Aeropuerto", "Centro"];
-
-      // ================= INICIALIZACIÓN =================
+      // ================= INICIALIZACIÓN Y LISTENERS =================
       document.addEventListener("DOMContentLoaded", () => {
         construirAnilloTicksSVG();
-        inicializarSelectores();
+        inicializarListenersNuevos();
         restaurarSesionGuardada();
       });
 
-      // Construye los 60 ticks radiales estilo Apple Face ID alrededor del círculo
+      function inicializarListenersNuevos() {
+        // Listeners para CURP
+        document.querySelectorAll('#nombres, #apellido_paterno, #apellido_materno, #curp').forEach(el => {
+          el.addEventListener('input', function() {
+            curpValidada = false;
+            this.value = this.value.toUpperCase().replace(/\s{2,}/g, ' ');
+            actualizarNombreCompletoFormulario();
+            
+            const btnCurp = document.getElementById('btn_validar_curp');
+            const c = document.getElementById('curp').value.trim();
+            if(btnCurp) btnCurp.disabled = c.length !== 18;
+          });
+        });
+
+        // Listeners habilitación secuencial de nombre
+        document.getElementById('nombres').addEventListener('input', function() {
+          document.getElementById('apellido_paterno').disabled = this.value.trim() === '';
+        });
+        document.getElementById('apellido_paterno').addEventListener('input', function() {
+          document.getElementById('apellido_materno').disabled = this.value.trim() === '';
+        });
+        document.getElementById('apellido_materno').addEventListener('input', function() {
+          document.getElementById('curp').disabled = this.value.trim() === '';
+        });
+
+        // Listeners para CP
+        document.getElementById('codigoPostal').addEventListener('input', function() {
+          cpValidado = false;
+          this.value = this.value.replace(/[^0-9]/g, '');
+          const btnCp = document.getElementById('btn_validar_cp');
+          if(btnCp) btnCp.disabled = this.value.length !== 5;
+          
+          document.getElementById('colonia').disabled = true;
+          document.getElementById('calle').disabled = true;
+          document.getElementById('numeroCasa').disabled = true;
+          document.getElementById('numeroInterior').disabled = true;
+          document.getElementById('entreCalles').disabled = true;
+          document.getElementById('referenciasDomicilio').disabled = true;
+        });
+
+        // Eventos Tipo Casa
+        document.querySelectorAll('input[name="tipoCasa"]').forEach(r => r.addEventListener('change', () => {
+          document.getElementById('tipoCasaGroup').classList.remove('input-error');
+          const divOtra = document.getElementById('otraCasaTexto');
+          if (document.getElementById('radioOtraCasa').checked) divOtra.classList.remove('hidden');
+          else { divOtra.classList.add('hidden'); divOtra.value = ''; }
+        }));
+      }
+
+      function actualizarNombreCompletoFormulario() {
+        const n = document.getElementById('nombres').value.trim();
+        const p = document.getElementById('apellido_paterno').value.trim();
+        const m = document.getElementById('apellido_materno').value.trim();
+        document.getElementById('nombre_completo').value = `${n} ${p} ${m}`.trim();
+      }
+
+      // ================= FUNCIONES AUXILIARES DE CURP =================
+      function quitarAcentos(cadena) { return cadena.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+      
+      function obtenerConsonanteInterna(palabra) {
+        if (!palabra || palabra.length < 2) return 'X';
+        const match = palabra.substring(1).match(/[BCDFGHJKLMNPQRSTVWXYZ]/i);
+        return match ? match[0].toUpperCase() : 'X';
+      }
+      
+      function procesarNombreCurp(nombreCompleto) {
+        const nombres = nombreCompleto.split(' ');
+        if (nombres.length > 1 && ['MARIA', 'MA.', 'MA', 'JOSE', 'J.', 'J'].includes(nombres[0])) return nombres[1];
+        return nombres[0];
+      }
+
+      // Construye los 60 ticks radiales estilo Apple Face ID
       function construirAnilloTicksSVG() {
         const svg = document.getElementById('faceTicksSvg');
         if (!svg) return;
@@ -1371,7 +1541,7 @@
         const rInner = 126, rOuter = 140;
 
         for (let i = 0; i < totalTicks; i++) {
-          const angleDeg = i * (360 / totalTicks) - 90; // 0 = Arriba (-90 deg)
+          const angleDeg = i * (360 / totalTicks) - 90;
           const rad = (angleDeg * Math.PI) / 180;
           const x1 = cx + rInner * Math.cos(rad);
           const y1 = cy + rInner * Math.sin(rad);
@@ -1389,7 +1559,6 @@
         }
       }
 
-      // Carga diferida de Detector + 68 Puntos Faciales (para calcular inclinación Arriba/Abajo/Izquierda/Derecha)
       async function asegurarModelosFaciales() {
         if (isFaceApiLoaded || isFaceApiLoading) return;
         if (typeof faceapi === 'undefined') return;
@@ -1415,14 +1584,12 @@
         } catch (e) {
           try {
             const copiaLigera = { ...solicitudData };
+            // Limpia imágenes si falla por quota de almacenamiento
             if (copiaLigera.firma1Url) copiaLigera.firma1Base64 = null;
-            if (copiaLigera.firma1AbajoUrl) copiaLigera.firma1AbajoBase64 = null;
-            if (copiaLigera.firma1ArribaUrl) copiaLigera.firma1ArribaBase64 = null;
-            if (copiaLigera.firma1IzquierdaUrl) copiaLigera.firma1IzquierdaBase64 = null;
-            if (copiaLigera.firma1DerechaUrl) copiaLigera.firma1DerechaBase64 = null;
             if (copiaLigera.ineFrontalUrl) copiaLigera.ineFrontalBase64 = null;
             if (copiaLigera.ineTraseraUrl) copiaLigera.ineTraseraBase64 = null;
             if (copiaLigera.comprobanteUrl) copiaLigera.comprobanteBase64 = null;
+            if (copiaLigera.firmaFinalUrl) copiaLigera.firmaFinalBase64 = null;
             sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(copiaLigera));
           } catch (err) {}
         }
@@ -1450,45 +1617,57 @@
           setVal('confirmEmail', solicitudData.email);
           setVal('numCliente', solicitudData.numCliente);
           setVal('fechaNacimiento', solicitudData.fechaNac);
+          
+          setVal('nombres', solicitudData.nombres);
+          setVal('apellido_paterno', solicitudData.apellidoPaterno);
+          setVal('apellido_materno', solicitudData.apellidoMaterno);
+          setVal('curp', solicitudData.curp);
+          if(solicitudData.curp) {
+              curpValidada = true;
+              document.getElementById('curp').disabled = false;
+              document.getElementById('apellido_paterno').disabled = false;
+              document.getElementById('apellido_materno').disabled = false;
+              setVal('rfc', solicitudData.rfc);
+              setVal('sexo', solicitudData.sexo);
+              actualizarNombreCompletoFormulario();
+              
+              let anio = solicitudData.curp.substring(4, 6);
+              let mes = solicitudData.curp.substring(6, 8);
+              let dia = solicitudData.curp.substring(8, 10);
+              let siglo = parseInt(anio) > 26 ? "19" : "20"; 
+              setVal('fecha_nac_calc', `${dia}/${mes}/${siglo}${anio}`);
+          }
+
           setVal('tel1', solicitudData.telefono);
           setVal('tel2', solicitudData.telefono);
-          setVal('calle', solicitudData.calle);
-          setVal('numeroCasa', solicitudData.numeroCasa);
-          setVal('entreCalles', solicitudData.entreCalles);
-          setVal('referenciasDomicilio', solicitudData.referenciasDomicilio);
           setVal('codigoPostal', solicitudData.codigoPostal);
+          if(solicitudData.codigoPostal) {
+              cpValidado = true;
+              setVal('estado', solicitudData.estado);
+              setVal('ciudad', solicitudData.ciudad);
+              setVal('calle', solicitudData.calle);
+              setVal('numeroCasa', solicitudData.numeroCasa);
+              setVal('numeroInterior', solicitudData.numeroInterior);
+              setVal('entreCalles', solicitudData.entreCalles);
+              setVal('referenciasDomicilio', solicitudData.referenciasDomicilio);
+              
+              document.getElementById('calle').disabled = false;
+              document.getElementById('numeroCasa').disabled = false;
+              document.getElementById('numeroInterior').disabled = false;
+              document.getElementById('entreCalles').disabled = false;
+              document.getElementById('referenciasDomicilio').disabled = false;
+              
+              if(solicitudData.colonia) {
+                  const selCol = document.getElementById('colonia');
+                  selCol.innerHTML = `<option value="${solicitudData.colonia}">${solicitudData.colonia}</option>`;
+                  selCol.disabled = false;
+                  selCol.value = solicitudData.colonia;
+              }
+          }
+
+          setVal('pais', solicitudData.pais);
           setVal('horarioDe', solicitudData.horarioDe);
           setVal('horarioA', solicitudData.horarioA);
-          setVal('ref1Nombre', solicitudData.ref1Nombre);
-          setVal('ref1Apellidos', solicitudData.ref1Apellidos);
-          setVal('ref1Telefono', solicitudData.ref1Telefono);
-          setVal('ref1TelefonoConfirm', solicitudData.ref1Telefono);
-          setVal('ref1Tiempo', solicitudData.ref1Tiempo);
-          setVal('ref1CalleNum', solicitudData.ref1CalleNum);
-          setVal('ref1Colonia', solicitudData.ref1Colonia);
-          setVal('ref1CiudadEstado', solicitudData.ref1CiuEst);
-          setVal('ref2Nombre', solicitudData.ref2Nombre);
-          setVal('ref2Apellidos', solicitudData.ref2Apellidos);
-          setVal('ref2Telefono', solicitudData.ref2Telefono);
-          setVal('ref2TelefonoConfirm', solicitudData.ref2Telefono);
-          setVal('ref2Tiempo', solicitudData.ref2Tiempo);
-          setVal('ref2CalleNum', solicitudData.ref2CalleNum);
-          setVal('ref2Colonia', solicitudData.ref2Colonia);
-          setVal('ref2CiudadEstado', solicitudData.ref2CiuEst);
-
-          if (solicitudData.pais) {
-            const selPais = document.getElementById('pais');
-            selPais.value = solicitudData.pais;
-            poblarEstados(solicitudData.pais, solicitudData.estado);
-            if (solicitudData.estado) {
-              poblarCiudades(solicitudData.pais, solicitudData.estado, solicitudData.ciudad);
-            }
-            if (solicitudData.ciudad) {
-              const inCol = document.getElementById('colonia');
-              inCol.disabled = false;
-              inCol.value = solicitudData.colonia || '';
-            }
-          }
 
           if (solicitudData.firma1Base64 || solicitudData.firma1Url) {
             restaurarSlotFoto('firma1Base64', 'firma1Url', 'previewFirma1', 'exampleFirma1', 'slotFirma1', 'btnOpenCamFirma1', 'badgeFirma1');
@@ -1807,8 +1986,351 @@
         }
         cambiarVista('vista-privacidad-1');
       }
-<!-- === FIN DE LA PARTE 2: PEGA LA PARTE 3 JUSTO DEBAJO === -->
+
+      // ================= VALIDACIÓN DE CURP EN BACKEND (Fuzzy Match) =================
+      async function procesarCURP() {
+        const curp = document.getElementById('curp').value.trim().toUpperCase();
+        if(curp.length !== 18) {
+          Swal.fire('Atención', 'La CURP debe tener exactamente 18 caracteres.', 'warning');
+          return;
+        }
+
+        // Lógica Matemática de Verificación Local
+        document.getElementById('rfc').value = curp.substring(0, 10);
+        let anio = curp.substring(4, 6);
+        let mes = curp.substring(6, 8);
+        let dia = curp.substring(8, 10);
+        let siglo = parseInt(anio) > 26 ? "19" : "20"; 
+        document.getElementById('fecha_nac_calc').value = `${dia}/${mes}/${siglo}${anio}`;
+        const sexoCurp = curp.charAt(10);
+        document.getElementById('sexo').value = sexoCurp === 'M' ? 'MUJER' : 'HOMBRE';
+
+        const n = procesarNombreCurp(quitarAcentos(document.getElementById('nombres').value.toUpperCase()));
+        const p = quitarAcentos(document.getElementById('apellido_paterno').value.toUpperCase());
+        const m = quitarAcentos(document.getElementById('apellido_materno').value.toUpperCase());
+        
+        const l1 = p.charAt(0);
+        let vP = p.substring(1).search(/[AEIOU]/);
+        const l2 = vP !== -1 ? p.charAt(vP + 1) : 'X';
+        const l3 = m ? m.charAt(0) : 'X';
+        const l4 = n.charAt(0);
+        const c1 = obtenerConsonanteInterna(p);
+        const c2 = m ? obtenerConsonanteInterna(m) : 'X';
+        const c3 = obtenerConsonanteInterna(n);
+
+        const iniciales = l1 + l2 + l3 + l4;
+        const complementos = sexoCurp + curp.substring(11, 13) + c1 + c2 + c3;
+
+        if (curp.substring(0, 4) !== iniciales || curp.substring(4, 10) !== (anio+mes+dia) || curp.substring(10, 16) !== complementos) {
+          curpValidada = false;
+          Swal.fire('Atención', 'La CURP no coincide matemáticamente con tus datos (Nombres y Fechas). Verifícala.', 'warning');
+          return; 
+        }
+
+        // Validación en Servidor (Evitar robo de identidad y fuzzy match)
+        toggleSkeleton('btn_validar_curp', 'skeleton-curp', true);
+        try {
+          const res = await sendToAppScript({
+            action: 'validarCURP',
+            curp: curp,
+            numCliente: solicitudData.numCliente,
+            nombres: document.getElementById('nombres').value.trim(),
+            apellidoPaterno: document.getElementById('apellido_paterno').value.trim(),
+            apellidoMaterno: document.getElementById('apellido_materno').value.trim()
+          });
+          
+          toggleSkeleton('btn_validar_curp', 'skeleton-curp', false);
+          
+          if (res.success) {
+            curpValidada = true;
+            solicitudData.nombres = document.getElementById('nombres').value.trim();
+            solicitudData.apellidoPaterno = document.getElementById('apellido_paterno').value.trim();
+            solicitudData.apellidoMaterno = document.getElementById('apellido_materno').value.trim();
+            solicitudData.curp = curp;
+            solicitudData.rfc = document.getElementById('rfc').value;
+            solicitudData.sexo = document.getElementById('sexo').value;
+            
+            Swal.fire({
+              title: '¡Identidad Confirmada!',
+              text: res.message || 'Los datos coinciden exitosamente.',
+              icon: 'success',
+              timer: 2000,
+              showConfirmButton: false
+            });
+            guardarEstadoEnSesion();
+          } else {
+            curpValidada = false;
+            Swal.fire('Error de Identidad', res.message, 'error');
+          }
+        } catch(e) {
+          toggleSkeleton('btn_validar_curp', 'skeleton-curp', false);
+          Swal.fire('Error', 'No se pudo conectar con el servidor: ' + e.message, 'error');
+        }
+      }
+
+      // ================= VALIDACIÓN DE CÓDIGO POSTAL =================
+      async function validarCP() {
+        const cp = document.getElementById('codigoPostal').value.trim();
+        if(cp.length !== 5) {
+          Swal.fire('Error', 'El Código Postal debe tener 5 dígitos.', 'error');
+          return;
+        }
+        
+        toggleSkeleton('btn_validar_cp', 'skeleton-cp', true);
+        try {
+          const res = await sendToAppScript({ action: 'consultarCP', cp: cp });
+          toggleSkeleton('btn_validar_cp', 'skeleton-cp', false);
+          
+          if(res.success) {
+            cpValidado = true;
+            document.getElementById('estado').value = res.estado.toUpperCase();
+            document.getElementById('ciudad').value = res.municipio.toUpperCase();
+            
+            const sel = document.getElementById('colonia');
+            sel.innerHTML = '<option value="">Selecciona tu colonia...</option>';
+            res.colonias.forEach(col => { 
+              sel.innerHTML += `<option value="${col.toUpperCase()}">${col.toUpperCase()}</option>`; 
+            });
+            
+            sel.disabled = false;
+            document.getElementById('calle').disabled = false;
+            document.getElementById('numeroCasa').disabled = false;
+            document.getElementById('numeroInterior').disabled = false;
+            document.getElementById('entreCalles').disabled = false;
+            document.getElementById('referenciasDomicilio').disabled = false;
+            
+            solicitudData.codigoPostal = cp;
+            solicitudData.estado = res.estado.toUpperCase();
+            solicitudData.ciudad = res.municipio.toUpperCase();
+            guardarEstadoEnSesion();
+          } else {
+            cpValidado = false;
+            Swal.fire('Error', res.message, 'error');
+          }
+        } catch(e) {
+          toggleSkeleton('btn_validar_cp', 'skeleton-cp', false);
+          Swal.fire('Error', 'Problema de conexión al buscar el C.P: ' + e.message, 'error');
+        }
+      }
+
+      // ================= LÓGICA DE NAVEGACIÓN ENTRE SECCIONES (ACTUALIZADA) =================
+      function avanzarDatosPersonales() {
+        if (!solicitudData.firma1Base64 && !solicitudData.firma1Url) {
+          Swal.fire({ icon: 'warning', title: 'Firma biométrica pendiente', text: 'Completa el escaneo de tu rostro antes de avanzar.', confirmButtonColor: '#439859' });
+          return;
+        }
+        cambiarVista('vista-datos-personales');
+      }
+
+      function avanzarDatosContacto() {
+        if (!curpValidada) {
+          Swal.fire({ icon: 'warning', title: 'CURP no validada', text: 'Por favor, ingresa tus datos y presiona "Validar" en tu CURP para confirmar tu identidad.', confirmButtonColor: '#439859' });
+          return;
+        }
+        if (!validarCamposReq(['nombres', 'apellido_paterno', 'apellido_materno', 'curp'])) {
+           Swal.fire({ icon: 'warning', title: 'Datos incompletos', text: 'Llena todos tus datos personales.', confirmButtonColor: '#439859' });
+           return;
+        }
+        cambiarVista('vista-datos-contacto');
+      }
+<!-- === FIN DE LA PARTE 2: AVISAME CUANDO ESTÉS LISTO PARA LA PARTE 3 === -->
   // === INICIO DE LA PARTE 3 ===
+      function inicializarSelectores() {
+        // Eventos para checkboxes de días y radios de tipo de casa
+        document.querySelectorAll('input[name="tipoCasa"]').forEach(r => r.addEventListener('change', () => {
+          document.getElementById('tipoCasaGroup').classList.remove('input-error');
+          const divOtra = document.getElementById('otraCasaTexto');
+          if (document.getElementById('radioOtraCasa').checked) divOtra.classList.remove('hidden');
+          else { divOtra.classList.add('hidden'); divOtra.value = ''; }
+        }));
+
+        document.querySelectorAll('input[name="diaContacto"]').forEach(cb => cb.addEventListener('change', () => {
+          document.getElementById('diasContactoGroup').classList.remove('input-error');
+        }));
+
+        document.querySelectorAll('input[name="parentesco1"]').forEach(r => r.addEventListener('change', () => {
+          document.getElementById('parentesco1Group').classList.remove('input-error');
+          const txt = document.getElementById('otroParentesco1Texto');
+          if (document.getElementById('radioOtroParentesco1').checked) txt.classList.remove('hidden');
+          else { txt.classList.add('hidden'); txt.value = ''; }
+        }));
+
+        document.querySelectorAll('input[name="parentesco2"]').forEach(r => r.addEventListener('change', () => {
+          document.getElementById('parentesco2Group').classList.remove('input-error');
+          const txt = document.getElementById('otroParentesco2Texto');
+          if (document.getElementById('radioOtroParentesco2').checked) txt.classList.remove('hidden');
+          else { txt.classList.add('hidden'); txt.value = ''; }
+        }));
+      }
+
+      function avanzarDocumentos() {
+        if (!validarCamposReq(['tel1', 'tel2', 'pais', 'codigoPostal', 'estado', 'ciudad', 'colonia', 'calle', 'numeroCasa', 'entreCalles', 'referenciasDomicilio', 'horarioDe', 'horarioA'])) {
+          Swal.fire({ icon: 'warning', title: 'Datos incompletos', text: 'Verifica los campos marcados en rojo en tu domicilio y contacto.', confirmButtonColor: '#439859' });
+          return;
+        }
+        
+        if (!cpValidado) {
+          Swal.fire({ icon: 'warning', title: 'Código Postal no validado', text: 'Por favor, valida tu Código Postal antes de continuar.', confirmButtonColor: '#439859' });
+          return;
+        }
+
+        const tel1 = document.getElementById('tel1'); 
+        const tel2 = document.getElementById('tel2');
+        if (tel1.value.length < 10) {
+          tel1.classList.add('input-error');
+          Swal.fire({ icon: 'error', title: 'Teléfono inválido', text: 'El número telefónico debe tener 10 dígitos.', confirmButtonColor: '#e53e3e' });
+          return;
+        }
+
+        if (tel1.value !== tel2.value) { 
+          tel2.classList.add('input-error');
+          Swal.fire({ icon: 'error', title: 'Datos incorrectos', text: 'Los teléfonos no coinciden.', confirmButtonColor: '#e53e3e' });
+          return; 
+        }
+
+        const hDe = document.getElementById('horarioDe');
+        const hA = document.getElementById('horarioA');
+        if (hDe.value === hA.value) {
+          hA.classList.add('input-error');
+          Swal.fire({ icon: 'warning', title: 'Horario inválido', text: 'El horario de inicio y fin de localización no pueden ser iguales.', confirmButtonColor: '#439859' });
+          return;
+        }
+
+        const diasChecked = Array.from(document.querySelectorAll('input[name="diaContacto"]:checked'));
+        if (diasChecked.length === 0) {
+          document.getElementById('diasContactoGroup').classList.add('input-error');
+          Swal.fire({ icon: 'warning', title: 'Falta información', text: 'Selecciona al menos un día de contacto.', confirmButtonColor: '#439859' });
+          return;
+        }
+
+        const rCasa = document.querySelector('input[name="tipoCasa"]:checked');
+        if (!rCasa) {
+          document.getElementById('tipoCasaGroup').classList.add('input-error');
+          Swal.fire({ icon: 'warning', title: 'Falta información', text: 'Indica la situación de tu vivienda.', confirmButtonColor: '#439859' });
+          return;
+        }
+
+        const otraCasaInput = document.getElementById('otraCasaTexto');
+        if (rCasa.value === 'Otra' && !otraCasaInput.value.trim()) {
+          otraCasaInput.classList.add('input-error');
+          Swal.fire({ icon: 'warning', title: 'Especifica tu vivienda', text: 'Seleccionaste "Otra situación" en tipo de vivienda, por favor especifícalo.', confirmButtonColor: '#439859' });
+          return;
+        }
+
+        solicitudData.telefono = tel1.value.trim();
+        solicitudData.pais = document.getElementById('pais').value;
+        solicitudData.estado = document.getElementById('estado').value;
+        solicitudData.ciudad = document.getElementById('ciudad').value;
+        solicitudData.colonia = document.getElementById('colonia').value.trim();
+        solicitudData.calle = document.getElementById('calle').value.trim();
+        solicitudData.numeroCasa = document.getElementById('numeroCasa').value.trim();
+        solicitudData.numeroInterior = document.getElementById('numeroInterior').value.trim();
+        solicitudData.entreCalles = document.getElementById('entreCalles').value.trim();
+        solicitudData.referenciasDomicilio = document.getElementById('referenciasDomicilio').value.trim();
+        solicitudData.codigoPostal = document.getElementById('codigoPostal').value.trim();
+        solicitudData.diasContacto = diasChecked.map(cb => cb.value).join(', ');
+        solicitudData.horarioDe = hDe.value;
+        solicitudData.horarioA = hA.value;
+        solicitudData.tipoCasa = rCasa.value;
+        solicitudData.otraCasa = otraCasaInput.value.trim();
+
+        cambiarVista('vista-documentos');
+      }
+
+      function avanzarReferencias() {
+        const tieneFrontal = solicitudData.ineFrontalBase64 || solicitudData.ineFrontalUrl;
+        const tieneTrasera = solicitudData.ineTraseraBase64 || solicitudData.ineTraseraUrl;
+        const tieneComp    = solicitudData.comprobanteBase64 || solicitudData.comprobanteUrl;
+
+        if (!tieneFrontal || !tieneTrasera || !tieneComp) {
+          Swal.fire({ icon: 'warning', title: 'Documentos pendientes', text: 'Captura las 3 fotos solicitadas (INE Frontal, INE Trasera y Comprobante).', confirmButtonColor: '#439859' });
+          return;
+        }
+        cambiarVista('vista-referencias');
+      }
+
+      function avanzarPrivacidadFinal() {
+        if (!validarCamposReq(['ref1Nombre', 'ref1Apellidos', 'ref1Telefono', 'ref1TelefonoConfirm', 'ref1Tiempo', 'ref1CalleNum', 'ref1Colonia', 'ref1CiudadEstado', 'ref2Nombre', 'ref2Apellidos', 'ref2Telefono', 'ref2TelefonoConfirm', 'ref2Tiempo', 'ref2CalleNum', 'ref2Colonia', 'ref2CiudadEstado'])) {
+          Swal.fire({ icon: 'warning', title: 'Datos incompletos', text: 'Verifica los campos marcados en rojo de tus referencias.', confirmButtonColor: '#439859' });
+          return;
+        }
+
+        const r1Par = document.querySelector('input[name="parentesco1"]:checked'); 
+        const r2Par = document.querySelector('input[name="parentesco2"]:checked');
+        
+        if (!r1Par) {
+          document.getElementById('parentesco1Group').classList.add('input-error');
+          Swal.fire({ icon: 'warning', title: 'Falta parentesco', text: 'Selecciona el parentesco de tu Referencia 1.', confirmButtonColor: '#439859' });
+          return;
+        }
+        if (r1Par.value === 'Otro' && !document.getElementById('otroParentesco1Texto').value.trim()) {
+          document.getElementById('otroParentesco1Texto').classList.add('input-error');
+          Swal.fire({ icon: 'warning', title: 'Especifica parentesco', text: 'Escribe cuál es tu parentesco con la Referencia 1.', confirmButtonColor: '#439859' });
+          return;
+        }
+
+        if (!r2Par) {
+          document.getElementById('parentesco2Group').classList.add('input-error');
+          Swal.fire({ icon: 'warning', title: 'Falta parentesco', text: 'Selecciona el parentesco de tu Referencia 2.', confirmButtonColor: '#439859' });
+          return;
+        }
+        if (r2Par.value === 'Otro' && !document.getElementById('otroParentesco2Texto').value.trim()) {
+          document.getElementById('otroParentesco2Texto').classList.add('input-error');
+          Swal.fire({ icon: 'warning', title: 'Especifica parentesco', text: 'Escribe cuál es tu parentesco con la Referencia 2.', confirmButtonColor: '#439859' });
+          return;
+        }
+
+        const r1Tel = document.getElementById('ref1Telefono'); 
+        const r1TelConf = document.getElementById('ref1TelefonoConfirm');
+        const r2Tel = document.getElementById('ref2Telefono'); 
+        const r2TelConf = document.getElementById('ref2TelefonoConfirm');
+
+        if (r1Tel.value.length < 10 || r2Tel.value.length < 10) {
+          if (r1Tel.value.length < 10) r1Tel.classList.add('input-error');
+          if (r2Tel.value.length < 10) r2Tel.classList.add('input-error');
+          Swal.fire({ icon: 'error', title: 'Teléfono inválido', text: 'Los teléfonos de las referencias deben tener 10 dígitos.', confirmButtonColor: '#e53e3e' });
+          return;
+        }
+
+        if (r1Tel.value !== r1TelConf.value) {
+          r1TelConf.classList.add('input-error');
+          Swal.fire({ icon: 'error', title: 'Teléfonos no coinciden', text: 'La confirmación de teléfono de la Referencia 1 no coincide.', confirmButtonColor: '#e53e3e' });
+          return;
+        }
+        if (r2Tel.value !== r2TelConf.value) {
+          r2TelConf.classList.add('input-error');
+          Swal.fire({ icon: 'error', title: 'Teléfonos no coinciden', text: 'La confirmación de teléfono de la Referencia 2 no coincide.', confirmButtonColor: '#e53e3e' });
+          return;
+        }
+
+        if (r1Tel.value === solicitudData.telefono || r2Tel.value === solicitudData.telefono || r1Tel.value === r2Tel.value) {
+          Swal.fire({ icon: 'warning', title: 'Teléfonos duplicados', text: 'Los números telefónicos de tus dos referencias deben ser distintos entre sí y distintos a tu propio número.', confirmButtonColor: '#439859' });
+          return;
+        }
+
+        solicitudData.ref1Nombre = document.getElementById('ref1Nombre').value.trim();
+        solicitudData.ref1Apellidos = document.getElementById('ref1Apellidos').value.trim();
+        solicitudData.ref1Parentesco = r1Par.value;
+        solicitudData.ref1OtroParentesco = document.getElementById('otroParentesco1Texto').value.trim();
+        solicitudData.ref1Telefono = r1Tel.value.trim();
+        solicitudData.ref1Tiempo = document.getElementById('ref1Tiempo').value.trim();
+        solicitudData.ref1CalleNum = document.getElementById('ref1CalleNum').value.trim();
+        solicitudData.ref1Colonia = document.getElementById('ref1Colonia').value.trim();
+        solicitudData.ref1CiuEst = document.getElementById('ref1CiudadEstado').value.trim();
+
+        solicitudData.ref2Nombre = document.getElementById('ref2Nombre').value.trim();
+        solicitudData.ref2Apellidos = document.getElementById('ref2Apellidos').value.trim();
+        solicitudData.ref2Parentesco = r2Par.value;
+        solicitudData.ref2OtroParentesco = document.getElementById('otroParentesco2Texto').value.trim();
+        solicitudData.ref2Telefono = r2Tel.value.trim();
+        solicitudData.ref2Tiempo = document.getElementById('ref2Tiempo').value.trim();
+        solicitudData.ref2CalleNum = document.getElementById('ref2CalleNum').value.trim();
+        solicitudData.ref2Colonia = document.getElementById('ref2Colonia').value.trim();
+        solicitudData.ref2CiuEst = document.getElementById('ref2CiudadEstado').value.trim();
+
+        cambiarVista('vista-privacidad-final');
+      }
+
       // ================= COMPRESIÓN DE IMÁGENES Y SUBIDA EN SEGUNDO PLANO =================
       function comprimirImagenDataUrl(dataUrl, maxDim = 1400, quality = 0.78) {
         return new Promise((resolve, reject) => {
@@ -1877,7 +2399,6 @@
       }
 
       // ================= CONTROLADOR DEL MODAL INMERSIVO (FACE ID & DOCUMENTOS) =================
-      // Estado de la secuencia de 5 pasos biométricos
       const BIO_STEPS = [
         { key: 'frente',    propB64: 'firma1Base64',          propUrl: 'firma1Url',          suffix: 'Firma_Inicial_Frente', chipId: 'chip-frente',    ticks: [] },
         { key: 'abajo',     propB64: 'firma1AbajoBase64',     propUrl: 'firma1AbajoUrl',     suffix: 'Bio_Abajo',            chipId: 'chip-abajo',     ticks: [23,24,25,26,27,28,29,30,31,32,33,34,35,36,37] },
@@ -1887,7 +2408,7 @@
       ];
       let currentBioStepIndex = 0;
       let bioHoldCounter = 0;
-      let neutralNoseRatioY = null; // Calibración dinámica al capturar el frente
+      let neutralNoseRatioY = null; 
 
       function actualizarTicksAnillo(activeIndices = [], completedIndices = [], allGreen = false) {
         const lines = document.querySelectorAll('#faceTicksSvg .tick-line');
@@ -2030,7 +2551,6 @@
         document.getElementById('scannerOverlayModal')?.classList.add('hidden');
       }
 
-      // Captura un fotograma en espejo del video facial sin interrumpir el stream
       function extraerFrameSelfieBase64(videoEl, maxDim = 960) {
         const canvas = document.getElementById('hiddenCaptureCanvas');
         let w = videoEl.videoWidth || 720;
@@ -2050,11 +2570,9 @@
         return canvas.toDataURL('image/jpeg', 0.80);
       }
 
-      // ================= MOTOR BIOMÉTRICO DE 5 ÁNGULOS (CENTRO, ABAJO, ARRIBA, IZQ, DER) =================
       async function ejecutarBiometria5Pasos(video) {
         if (!isDetectionRunning || activeScannerMode !== 'bio5') return;
 
-        // Si el modelo neuronal sigue descargando en red lenta, ofrece apoyo manual tras 4 seg
         if (!isFaceApiLoaded) {
           configurarPildoraFacial('Preparando sensor biométrico...', null);
           setTimeout(() => {
@@ -2066,7 +2584,6 @@
           return;
         }
 
-        // Reunir los ticks que ya fueron completados en pasos anteriores
         let ticksCompletados = [];
         for (let i = 0; i < currentBioStepIndex; i++) {
           ticksCompletados = ticksCompletados.concat(BIO_STEPS[i].ticks);
@@ -2089,7 +2606,6 @@
             const box = det.detection.box;
             const faceRatio = box.width / Math.min(vw, vh);
 
-            // 1. Validación de distancia estilo Apple (Aléjate / Acércate)
             if (faceRatio > 0.78) {
               bioHoldCounter = 0;
               configurarPildoraFacial('Aléjate un poco', null);
@@ -2097,23 +2613,18 @@
               bioHoldCounter = 0;
               configurarPildoraFacial('Acércate un poco', null);
             } else {
-              // 2. Cálculo de ángulos de cabeza (Yaw & Pitch) con los 68 puntos faciales
               const pos = det.landmarks.positions;
-              const nose = pos[30];     // Punta de la nariz
-              const leftJaw = pos[0];   // Borde izquierdo en cámara
-              const rightJaw = pos[16]; // Borde derecho en cámara
-              const chin = pos[8];      // Mentón
+              const nose = pos[30];     
+              const leftJaw = pos[0];   
+              const rightJaw = pos[16]; 
+              const chin = pos[8];      
               const leftEye = pos[36];
               const rightEye = pos[45];
 
               const faceWidth = Math.max(1, rightJaw.x - leftJaw.x);
-              // Ratio horizontal (0.50 = mirando al frente). Como el video está en espejo:
-              // < 0.42 = Usuario giró cabeza a SU derecha | > 0.58 = Usuario giró cabeza a SU izquierda
               const yawRatio = (nose.x - leftJaw.x) / faceWidth;
-
               const eyesMidY = (leftEye.y + rightEye.y) / 2;
               const lowerFaceH = Math.max(1, chin.y - eyesMidY);
-              // Ratio vertical (~0.36 neutral). Mayor = mira abajo | Menor = mira arriba
               const pitchRatio = (nose.y - eyesMidY) / lowerFaceH;
               const basePitch = neutralNoseRatioY || 0.36;
 
@@ -2156,13 +2667,10 @@
 
               if (cumplePose) {
                 bioHoldCounter++;
-                // Requiere 2 lecturas consecutivas (~320ms) para confirmar el gesto sin falsos positivos
                 if (bioHoldCounter >= 2) {
                   if (pasoActual.key === 'frente') {
-                    neutralNoseRatioY = pitchRatio; // Guarda su ángulo neutro personal
+                    neutralNoseRatioY = pitchRatio; 
                   }
-
-                  // Capturar y lanzar subida en segundo plano de este ángulo
                   const frameB64 = extraerFrameSelfieBase64(video, 920);
                   solicitudData[pasoActual.propB64] = frameB64;
                   document.getElementById(pasoActual.chipId)?.classList.add('done');
@@ -2173,7 +2681,6 @@
                   currentBioStepIndex++;
                   bioHoldCounter = 0;
 
-                  // ¿Se completaron las 5 fotos (Centro, Abajo, Arriba, Izquierda, Derecha)?
                   if (currentBioStepIndex >= BIO_STEPS.length) {
                     finalizarExitoBiometrico5Pasos();
                     return;
@@ -2195,13 +2702,12 @@
 
       function finalizarExitoBiometrico5Pasos() {
         isDetectionRunning = false;
-        actualizarTicksAnillo([], [], true); // Todos los 60 ticks en verde
+        actualizarTicksAnillo([], [], true); 
         document.getElementById('faceCircleViewport').classList.add('ready-green');
         document.getElementById('faceFloatingPill').classList.add('hidden');
         document.getElementById('faceSuccessCover').classList.add('show');
         if (navigator.vibrate) navigator.vibrate([40, 60, 80]);
 
-        // Actualizar tarjeta de vista previa en Vista 3 con la foto frontal principal
         const frontalB64 = solicitudData.firma1Base64;
         if (frontalB64) {
           document.getElementById('exampleFirma1').style.display = 'none';
@@ -2213,13 +2719,11 @@
         }
         guardarEstadoEnSesion();
 
-        // Mostrar animación del checkmark por 1.15s y cerrar modal
         setTimeout(() => {
           cerrarCamaraGlobal();
         }, 1150);
       }
 
-      // ================= MOTOR SELFIE FINAL RÁPIDA (1 FOTO EN VISTA 7) =================
       async function ejecutarSelfieUnicaFinal(video) {
         if (!isDetectionRunning || activeScannerMode !== 'selfieFinal') return;
 
@@ -2273,7 +2777,6 @@
         }
       }
 
-      // ================= ESCÁNER INTELIGENTE DE DOCUMENTOS (INE Y COMPROBANTE) =================
       function ejecutarEscaneoDocumento(video, modoDoc) {
         if (!isDetectionRunning || activeScannerMode !== modoDoc) return;
 
@@ -2283,7 +2786,6 @@
         ctx.drawImage(video, 0, 0, SAMPLE_W, SAMPLE_H);
         const currentFrame = ctx.getImageData(0, 0, SAMPLE_W, SAMPLE_H);
 
-        // Evaluar contraste/detalle en el centro para verificar que hay un documento con texto y no la cámara tapada
         let contrastSum = 0;
         for (let i = 5; i < currentFrame.data.length - 4; i += 8) {
           contrastSum += Math.abs(currentFrame.data[i] - currentFrame.data[i - 4]);
@@ -2307,7 +2809,6 @@
             if (stableFramesCount >= 3) {
               pillText.innerText = 'Mantén firme... capturando';
             }
-            // Auto-captura cuando el documento se mantiene firme y enfocado (~1.1 seg)
             if (stableFramesCount >= 7) {
               capturarDocumentoActualDesdeModal();
               return;
@@ -2325,7 +2826,6 @@
         }
       }
 
-      // Recorta el documento a la proporción limpia del marco (85:54 para INE o 3:4 para comprobante)
       function capturarDocumentoActualDesdeModal() {
         if (!activeCamStream) return;
         isDetectionRunning = false;
@@ -2415,7 +2915,6 @@
         abrirEscannerInmersivo(tipo, fallback);
       }
 
-      // Botón de captura manual dentro del modal (para documentos o si el usuario prefiere tocar manualmente)
       document.getElementById('btnManualCaptureScanner').addEventListener('click', () => {
         if (activeScannerMode === 'frontal' || activeScannerMode === 'trasera' || activeScannerMode === 'comprobante') {
           capturarDocumentoActualDesdeModal();
@@ -2438,267 +2937,7 @@
       document.getElementById('fileIneTraseraFallback').addEventListener('change', (e) => manejarArchivo(e, 'ineTraseraBase64', 'ineTraseraUrl', 'INE_Trasera', 'previewIneTrasera', 'exampleIneTrasera', 'slotIneTrasera', 'btnOpenCamIneTrasera', 'badgeIneTrasera'));
       document.getElementById('fileComprobanteFallback').addEventListener('change', (e) => manejarArchivo(e, 'comprobanteBase64', 'comprobanteUrl', 'Comprobante', 'previewComprobante', 'exampleComprobante', 'slotComprobante', 'btnOpenCamComprobante', 'badgeComprobante'));
 
-      // ================= LÓGICA DE NAVEGACIÓN ENTRE SECCIONES =================
-      function avanzarDatosContacto() {
-        if (!solicitudData.firma1Base64 && !solicitudData.firma1Url) {
-          Swal.fire({ icon: 'warning', title: 'Firma biométrica pendiente', text: 'Completa el escaneo de tu rostro antes de avanzar.', confirmButtonColor: '#439859' });
-          return;
-        }
-        cambiarVista('vista-datos-contacto');
-      }
-
-      function inicializarSelectores() {
-        const selPais = document.getElementById('pais');
-        const selEst = document.getElementById('estado');
-        const selCiu = document.getElementById('ciudad');
-        const inCol = document.getElementById('colonia');
-        const datalistCol = document.getElementById('coloniasCuliacan');
-        datalistCol.innerHTML = coloniasCuliacan.map(c => `<option value="${c}">`).join('');
-
-        selPais.addEventListener('change', () => {
-          selEst.innerHTML = '<option value="">Seleccione un estado</option>';
-          selCiu.innerHTML = '<option value="">Seleccione una ciudad</option>';
-          selEst.disabled = true; selCiu.disabled = true; inCol.disabled = true;
-          if (!selPais.value) return;
-
-          if (solicitudData.paisRegistrado && selPais.value !== solicitudData.paisRegistrado) {
-            selPais.classList.add('input-error');
-            Swal.fire({ icon: 'error', title: 'País incorrecto', text: 'El país seleccionado no coincide con tu lugar de registro.', confirmButtonColor: '#e53e3e' });
-            selPais.value = ""; 
-            return;
-          }
-          selPais.classList.remove('input-error');
-          poblarEstados(selPais.value);
-        });
-        
-        selEst.addEventListener('change', () => {
-          selCiu.innerHTML = '<option value="">Seleccione una ciudad</option>';
-          selCiu.disabled = true; inCol.disabled = true;
-          if (selEst.value) {
-            poblarCiudades(selPais.value, selEst.value);
-          }
-        });
-        
-        selCiu.addEventListener('change', () => {
-          inCol.value = '';
-          inCol.disabled = !selCiu.value;
-        });
-
-        document.querySelectorAll('input[name="tipoCasa"]').forEach(r => r.addEventListener('change', () => {
-          document.getElementById('tipoCasaGroup').classList.remove('input-error');
-          const divOtra = document.getElementById('otraCasaTexto');
-          if (document.getElementById('radioOtraCasa').checked) divOtra.classList.remove('hidden');
-          else { divOtra.classList.add('hidden'); divOtra.value = ''; }
-        }));
-
-        document.querySelectorAll('input[name="diaContacto"]').forEach(cb => cb.addEventListener('change', () => {
-          document.getElementById('diasContactoGroup').classList.remove('input-error');
-        }));
-
-        document.querySelectorAll('input[name="parentesco1"]').forEach(r => r.addEventListener('change', () => {
-          document.getElementById('parentesco1Group').classList.remove('input-error');
-          const txt = document.getElementById('otroParentesco1Texto');
-          if (document.getElementById('radioOtroParentesco1').checked) txt.classList.remove('hidden');
-          else { txt.classList.add('hidden'); txt.value = ''; }
-        }));
-
-        document.querySelectorAll('input[name="parentesco2"]').forEach(r => r.addEventListener('change', () => {
-          document.getElementById('parentesco2Group').classList.remove('input-error');
-          const txt = document.getElementById('otroParentesco2Texto');
-          if (document.getElementById('radioOtroParentesco2').checked) txt.classList.remove('hidden');
-          else { txt.classList.add('hidden'); txt.value = ''; }
-        }));
-      }
-
-      function poblarEstados(pais, estadoSeleccionado = '') {
-        const selEst = document.getElementById('estado');
-        selEst.innerHTML = '<option value="">Seleccione un estado</option>';
-        const estados = Object.keys(datosUbicacion[pais] || {});
-        estados.forEach(e => {
-          const opt = document.createElement('option');
-          opt.value = e; opt.textContent = e;
-          selEst.appendChild(opt);
-        });
-        selEst.disabled = false;
-        if (estadoSeleccionado) selEst.value = estadoSeleccionado;
-      }
-
-      function poblarCiudades(pais, estado, ciudadSeleccionada = '') {
-        const selCiu = document.getElementById('ciudad');
-        selCiu.innerHTML = '<option value="">Seleccione una ciudad</option>';
-        const ciudades = (datosUbicacion[pais] && datosUbicacion[pais][estado]) || [];
-        ciudades.forEach(c => {
-          const opt = document.createElement('option');
-          opt.value = c; opt.textContent = c;
-          selCiu.appendChild(opt);
-        });
-        selCiu.disabled = false;
-        if (ciudadSeleccionada) selCiu.value = ciudadSeleccionada;
-      }
-
-      function avanzarDocumentos() {
-        if (!validarCamposReq(['tel1', 'tel2', 'pais', 'estado', 'ciudad', 'colonia', 'calle', 'numeroCasa', 'entreCalles', 'referenciasDomicilio', 'codigoPostal', 'horarioDe', 'horarioA'])) {
-          Swal.fire({ icon: 'warning', title: 'Datos incompletos', text: 'Verifica los campos marcados en rojo.', confirmButtonColor: '#439859' });
-          return;
-        }
-
-        const tel1 = document.getElementById('tel1'); 
-        const tel2 = document.getElementById('tel2');
-        if (tel1.value.length < 10) {
-          tel1.classList.add('input-error');
-          Swal.fire({ icon: 'error', title: 'Teléfono inválido', text: 'El número telefónico debe tener 10 dígitos.', confirmButtonColor: '#e53e3e' });
-          return;
-        }
-
-        if (tel1.value !== tel2.value) { 
-          tel2.classList.add('input-error');
-          Swal.fire({ icon: 'error', title: 'Datos incorrectos', text: 'Los teléfonos no coinciden.', confirmButtonColor: '#e53e3e' });
-          return; 
-        }
-
-        const hDe = document.getElementById('horarioDe');
-        const hA = document.getElementById('horarioA');
-        if (hDe.value === hA.value) {
-          hA.classList.add('input-error');
-          Swal.fire({ icon: 'warning', title: 'Horario inválido', text: 'El horario de inicio y fin de localización no pueden ser iguales.', confirmButtonColor: '#439859' });
-          return;
-        }
-
-        const diasChecked = Array.from(document.querySelectorAll('input[name="diaContacto"]:checked'));
-        if (diasChecked.length === 0) {
-          document.getElementById('diasContactoGroup').classList.add('input-error');
-          Swal.fire({ icon: 'warning', title: 'Falta información', text: 'Selecciona al menos un día de contacto.', confirmButtonColor: '#439859' });
-          return;
-        }
-
-        const rCasa = document.querySelector('input[name="tipoCasa"]:checked');
-        if (!rCasa) {
-          document.getElementById('tipoCasaGroup').classList.add('input-error');
-          Swal.fire({ icon: 'warning', title: 'Falta información', text: 'Indica la situación de tu vivienda.', confirmButtonColor: '#439859' });
-          return;
-        }
-
-        const otraCasaInput = document.getElementById('otraCasaTexto');
-        if (rCasa.value === 'Otra' && !otraCasaInput.value.trim()) {
-          otraCasaInput.classList.add('input-error');
-          Swal.fire({ icon: 'warning', title: 'Especifica tu vivienda', text: 'Seleccionaste "Otra" en tipo de vivienda, por favor especifícalo.', confirmButtonColor: '#439859' });
-          return;
-        }
-
-        solicitudData.telefono = tel1.value.trim();
-        solicitudData.pais = document.getElementById('pais').value;
-        solicitudData.estado = document.getElementById('estado').value;
-        solicitudData.ciudad = document.getElementById('ciudad').value;
-        solicitudData.colonia = document.getElementById('colonia').value.trim();
-        solicitudData.calle = document.getElementById('calle').value.trim();
-        solicitudData.numeroCasa = document.getElementById('numeroCasa').value.trim();
-        solicitudData.entreCalles = document.getElementById('entreCalles').value.trim();
-        solicitudData.referenciasDomicilio = document.getElementById('referenciasDomicilio').value.trim();
-        solicitudData.codigoPostal = document.getElementById('codigoPostal').value.trim();
-        solicitudData.diasContacto = diasChecked.map(cb => cb.value).join(', ');
-        solicitudData.horarioDe = hDe.value;
-        solicitudData.horarioA = hA.value;
-        solicitudData.tipoCasa = rCasa.value;
-        solicitudData.otraCasa = otraCasaInput.value.trim();
-
-        cambiarVista('vista-documentos');
-      }
-
-      function avanzarReferencias() {
-        const tieneFrontal = solicitudData.ineFrontalBase64 || solicitudData.ineFrontalUrl;
-        const tieneTrasera = solicitudData.ineTraseraBase64 || solicitudData.ineTraseraUrl;
-        const tieneComp    = solicitudData.comprobanteBase64 || solicitudData.comprobanteUrl;
-
-        if (!tieneFrontal || !tieneTrasera || !tieneComp) {
-          Swal.fire({ icon: 'warning', title: 'Documentos pendientes', text: 'Captura las 3 fotos solicitadas (INE Frontal, INE Trasera y Comprobante).', confirmButtonColor: '#439859' });
-          return;
-        }
-        cambiarVista('vista-referencias');
-      }
-
-      function avanzarPrivacidadFinal() {
-        if (!validarCamposReq(['ref1Nombre', 'ref1Apellidos', 'ref1Telefono', 'ref1TelefonoConfirm', 'ref1Tiempo', 'ref1CalleNum', 'ref1Colonia', 'ref1CiudadEstado', 'ref2Nombre', 'ref2Apellidos', 'ref2Telefono', 'ref2TelefonoConfirm', 'ref2Tiempo', 'ref2CalleNum', 'ref2Colonia', 'ref2CiudadEstado'])) {
-          Swal.fire({ icon: 'warning', title: 'Datos incompletos', text: 'Verifica los campos marcados en rojo de tus referencias.', confirmButtonColor: '#439859' });
-          return;
-        }
-
-        const r1Par = document.querySelector('input[name="parentesco1"]:checked'); 
-        const r2Par = document.querySelector('input[name="parentesco2"]:checked');
-        
-        if (!r1Par) {
-          document.getElementById('parentesco1Group').classList.add('input-error');
-          Swal.fire({ icon: 'warning', title: 'Falta parentesco', text: 'Selecciona el parentesco de tu Referencia 1.', confirmButtonColor: '#439859' });
-          return;
-        }
-        if (r1Par.value === 'Otro' && !document.getElementById('otroParentesco1Texto').value.trim()) {
-          document.getElementById('otroParentesco1Texto').classList.add('input-error');
-          Swal.fire({ icon: 'warning', title: 'Especifica parentesco', text: 'Escribe cuál es tu parentesco con la Referencia 1.', confirmButtonColor: '#439859' });
-          return;
-        }
-
-        if (!r2Par) {
-          document.getElementById('parentesco2Group').classList.add('input-error');
-          Swal.fire({ icon: 'warning', title: 'Falta parentesco', text: 'Selecciona el parentesco de tu Referencia 2.', confirmButtonColor: '#439859' });
-          return;
-        }
-        if (r2Par.value === 'Otro' && !document.getElementById('otroParentesco2Texto').value.trim()) {
-          document.getElementById('otroParentesco2Texto').classList.add('input-error');
-          Swal.fire({ icon: 'warning', title: 'Especifica parentesco', text: 'Escribe cuál es tu parentesco con la Referencia 2.', confirmButtonColor: '#439859' });
-          return;
-        }
-
-        const r1Tel = document.getElementById('ref1Telefono'); 
-        const r1TelConf = document.getElementById('ref1TelefonoConfirm');
-        const r2Tel = document.getElementById('ref2Telefono'); 
-        const r2TelConf = document.getElementById('ref2TelefonoConfirm');
-
-        if (r1Tel.value.length < 10 || r2Tel.value.length < 10) {
-          if (r1Tel.value.length < 10) r1Tel.classList.add('input-error');
-          if (r2Tel.value.length < 10) r2Tel.classList.add('input-error');
-          Swal.fire({ icon: 'error', title: 'Teléfono inválido', text: 'Los teléfonos de las referencias deben tener 10 dígitos.', confirmButtonColor: '#e53e3e' });
-          return;
-        }
-
-        if (r1Tel.value !== r1TelConf.value) {
-          r1TelConf.classList.add('input-error');
-          Swal.fire({ icon: 'error', title: 'Teléfonos no coinciden', text: 'La confirmación de teléfono de la Referencia 1 no coincide.', confirmButtonColor: '#e53e3e' });
-          return;
-        }
-        if (r2Tel.value !== r2TelConf.value) {
-          r2TelConf.classList.add('input-error');
-          Swal.fire({ icon: 'error', title: 'Teléfonos no coinciden', text: 'La confirmación de teléfono de la Referencia 2 no coincide.', confirmButtonColor: '#e53e3e' });
-          return;
-        }
-
-        if (r1Tel.value === solicitudData.telefono || r2Tel.value === solicitudData.telefono || r1Tel.value === r2Tel.value) {
-          Swal.fire({ icon: 'warning', title: 'Teléfonos duplicados', text: 'Los números telefónicos de tus dos referencias deben ser distintos entre sí y distintos a tu propio número.', confirmButtonColor: '#439859' });
-          return;
-        }
-
-        solicitudData.ref1Nombre = document.getElementById('ref1Nombre').value.trim();
-        solicitudData.ref1Apellidos = document.getElementById('ref1Apellidos').value.trim();
-        solicitudData.ref1Parentesco = r1Par.value;
-        solicitudData.ref1OtroParentesco = document.getElementById('otroParentesco1Texto').value.trim();
-        solicitudData.ref1Telefono = r1Tel.value.trim();
-        solicitudData.ref1Tiempo = document.getElementById('ref1Tiempo').value.trim();
-        solicitudData.ref1CalleNum = document.getElementById('ref1CalleNum').value.trim();
-        solicitudData.ref1Colonia = document.getElementById('ref1Colonia').value.trim();
-        solicitudData.ref1CiuEst = document.getElementById('ref1CiudadEstado').value.trim();
-
-        solicitudData.ref2Nombre = document.getElementById('ref2Nombre').value.trim();
-        solicitudData.ref2Apellidos = document.getElementById('ref2Apellidos').value.trim();
-        solicitudData.ref2Parentesco = r2Par.value;
-        solicitudData.ref2OtroParentesco = document.getElementById('otroParentesco2Texto').value.trim();
-        solicitudData.ref2Telefono = r2Tel.value.trim();
-        solicitudData.ref2Tiempo = document.getElementById('ref2Tiempo').value.trim();
-        solicitudData.ref2CalleNum = document.getElementById('ref2CalleNum').value.trim();
-        solicitudData.ref2Colonia = document.getElementById('ref2Colonia').value.trim();
-        solicitudData.ref2CiuEst = document.getElementById('ref2CiudadEstado').value.trim();
-
-        cambiarVista('vista-privacidad-final');
-      }
-
-      // ================= ENVÍO FINAL ULTRALIGERO CON LOS 5 ÁNGULOS Y DOCUMENTOS =================
+      // ================= ENVÍO FINAL =================
       async function enviarActualizacionFinal() {
         if (!solicitudData.firmaFinalBase64 && !solicitudData.firmaFinalUrl) {
           Swal.fire({ icon: 'warning', title: 'Firma final pendiente', text: 'Toma tu selfie de cierre para finalizar.', confirmButtonColor: '#439859' });
@@ -2709,13 +2948,11 @@
         solicitudData.navegador = obtenerDispositivoYNavegador();
 
         try {
-          // Esperar a que concluya cualquier subida en segundo plano que siga en vuelo
           const promesasPendientes = Object.values(pendingUploads);
           if (promesasPendientes.length > 0) {
             await Promise.allSettled(promesasPendientes);
           }
 
-          // Si las fotos ya tienen URL en Drive, se omite su Base64 en el POST final para respuesta instantánea
           const payloadFinal = {
             ...solicitudData,
             firma1Base64:          solicitudData.firma1Url          ? null : solicitudData.firma1Base64,
