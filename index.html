@@ -2183,12 +2183,19 @@
           return;
         }
         
+        const paisSeleccionado = document.getElementById('pais').value;
+        if (solicitudData.paisRegistrado && paisSeleccionado !== solicitudData.paisRegistrado) {
+          document.getElementById('pais').classList.add('input-error');
+          Swal.fire({ icon: 'error', title: 'País incorrecto', text: 'El país seleccionado no coincide con tu lugar de registro inicial.', confirmButtonColor: '#e53e3e' });
+          return;
+        }
+
         if (!cpValidado) {
           Swal.fire({ icon: 'warning', title: 'Código Postal no validado', text: 'Por favor, valida tu Código Postal antes de continuar.', confirmButtonColor: '#439859' });
           return;
         }
 
-        const tel1 = document.getElementById('tel1'); 
+        const tel1 = document.getElementById('tel1');
         const tel2 = document.getElementById('tel2');
         if (tel1.value.length < 10) {
           tel1.classList.add('input-error');
