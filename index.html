@@ -1000,7 +1000,7 @@
             <div class="form-group">
               <label>Código Postal</label>
               <div style="display: flex; gap: 10px;">
-                <input type="text" id="codigoPostal" inputmode="numeric" maxlength="5" class="form-control" placeholder="Ej. 80000" disabled required>
+                <input type="text" id="codigoPostal" inputmode="numeric" maxlength="5" class="form-control" placeholder="Ej. 80000" required>
                 <button class="btn-accion btn-secundario" id="btn_validar_cp" onclick="validarCP()" style="width: auto; padding: 0 16px;" disabled>Validar</button>
               </div>
             </div>
@@ -2136,13 +2136,21 @@
 <!-- === FIN DE LA PARTE 2: AVISAME CUANDO ESTÉS LISTO PARA LA PARTE 3 === -->
   // === INICIO DE LA PARTE 3 ===
       function inicializarSelectores() {
-        // Bloqueo estricto de País
+        // Bloqueo estricto de País (A prueba de espacios y mayúsculas)
         const selPais = document.getElementById('pais');
         if(selPais) {
           selPais.addEventListener('change', function() {
-            if (solicitudData.paisRegistrado && this.value && this.value !== solicitudData.paisRegistrado) {
+            if (!this.value) {
+              this.classList.remove('input-error');
+              return;
+            }
+            
+            const paisBD = (solicitudData.paisRegistrado || "").trim().toLowerCase();
+            const paisSeleccionado = this.value.trim().toLowerCase();
+            
+            if (paisBD && paisSeleccionado !== paisBD) {
               this.classList.add('input-error');
-              Swal.fire({ icon: 'error', title: 'País incorrecto', text: 'El país seleccionado no coincide con tu lugar de registro.', confirmButtonColor: '#e53e3e' });
+              Swal.fire({ icon: 'error', title: 'País incorrecto', text: 'El país seleccionado no coincide con tu lugar de registro inicial.', confirmButtonColor: '#e53e3e' });
               this.value = ""; 
             } else {
               this.classList.remove('input-error');
