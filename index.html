@@ -2136,6 +2136,20 @@
 <!-- === FIN DE LA PARTE 2: AVISAME CUANDO ESTÉS LISTO PARA LA PARTE 3 === -->
   // === INICIO DE LA PARTE 3 ===
       function inicializarSelectores() {
+        // Bloqueo estricto de País
+        const selPais = document.getElementById('pais');
+        if(selPais) {
+          selPais.addEventListener('change', function() {
+            if (solicitudData.paisRegistrado && this.value && this.value !== solicitudData.paisRegistrado) {
+              this.classList.add('input-error');
+              Swal.fire({ icon: 'error', title: 'País incorrecto', text: 'El país seleccionado no coincide con tu lugar de registro.', confirmButtonColor: '#e53e3e' });
+              this.value = ""; 
+            } else {
+              this.classList.remove('input-error');
+            }
+          });
+        }
+
         // Eventos para checkboxes de días y radios de tipo de casa
         document.querySelectorAll('input[name="tipoCasa"]').forEach(r => r.addEventListener('change', () => {
           document.getElementById('tipoCasaGroup').classList.remove('input-error');
