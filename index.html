@@ -2345,10 +2345,471 @@
         }
       }
 
-      /* 
-        Las funciones de FaceAPI, Cámaras y Helpers (como obtenerDispositivoYNavegador, etc.) 
-        se mantienen igual que en la Parte 1/2 y ya están cubiertas arriba.
-      */
+      function obtenerDispositivoYNavegador() {
+        var ua = navigator.userAgent;
+        var browser = "Desconocido", os = "Desconocido";
+        if (ua.match(/Android/i)) os = "Android";
+        else if (ua.match(/iPhone|iPad|iPod/i)) os = "iOS";
+        else if (ua.match(/Windows/i)) os = "Windows";
+        else if (ua.match(/Mac/i)) os = "MacOS";
+        if (ua.match(/Chrome/i) || ua.match(/CriOS/i)) browser = "Chrome";
+        else if (ua.match(/Safari/i)) browser = "Safari";
+        else if (ua.match(/Firefox/i)) browser = "Firefox";
+        return browser + " en " + os;
+      }
+
+      function verificarNavegadorYContinuar(vistaDestino) {
+        cambiarVista(vistaDestino);
+      }
+
+      // ================= COMPRESIÓN Y SUBIDA EN SEGUNDO PLANO =================
+      function comprimirImagenDataUrl(dataUrl, maxDim = 1400, quality = 0.78) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width;
+            let h = img.height;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+              else { w = Math.round((w * maxDim) / h); h = maxDim; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.onerror = reject;
+          img.src = dataUrl;
+        });
+      }
+
+      function actualizarBadgeSubida(badgeId, estado, texto) {
+        const badge = document.getElementById(badgeId);
+        if (!badge) return;
+        badge.className = 'upload-badge ' + estado;
+        badge.innerHTML = estado === 'uploading'
+          ? `<i class="fas fa-sync fa-spin"></i> ${texto}`
+          : `<i class="fas fa-check-circle"></i> ${texto}`;
+        badge.classList.remove('hidden');
+      }
+
+      function dispararSubidaSegundoPlano(propBase64, propUrl, suffix, badgeId = null) {
+        const base64 = solicitudData[propBase64];
+        if (!base64) return;
+        solicitudData[propUrl] = null;
+        if (badgeId) actualizarBadgeSubida(badgeId, 'uploading', 'Sincronizando en la nube...');
+
+        const uploadPromise = sendToAppScript({
+          action: 'subirImagenIndividual',
+          base64: base64,
+          nombreCompleto: solicitudData.nombreCompleto || ('Cliente_' + solicitudData.numCliente),
+          suffix: suffix
+        }, 1).then(res => {
+          if (res && res.success && res.url) {
+            solicitudData[propUrl] = res.url;
+            guardarEstadoEnSesion();
+            if (badgeId) actualizarBadgeSubida(badgeId, 'uploaded', 'Sincronizada en la nube');
+          } else if (badgeId) {
+            document.getElementById(badgeId)?.classList.add('hidden');
+          }
+        }).catch(() => {
+          if (badgeId) document.getElementById(badgeId)?.classList.add('hidden');
+        }).finally(() => {
+          delete pendingUploads[propUrl];
+        });
+        pendingUploads[propUrl] = uploadPromise;
+      }
+
+      // ================= CÁMARAS Y FACE API =================
+      const BIO_STEPS = [
+        { key: 'frente',    propB64: 'firma1Base64',          propUrl: 'firma1Url',          suffix: 'Firma_Inicial_Frente', chipId: 'chip-frente',    ticks: [] },
+        { key: 'abajo',     propB64: 'firma1AbajoBase64',     propUrl: 'firma1AbajoUrl',     suffix: 'Bio_Abajo',            chipId: 'chip-abajo',     ticks: [23,24,25,26,27,28,29,30,31,32,33,34,35,36,37] },
+        { key: 'arriba',    propB64: 'firma1ArribaBase64',    propUrl: 'firma1ArribaUrl',    suffix: 'Bio_Arriba',           chipId: 'chip-arriba',    ticks: [53,54,55,56,57,58,59,0,1,2,3,4,5,6,7] },
+        { key: 'izquierda', propB64: 'firma1IzquierdaBase64', propUrl: 'firma1IzquierdaUrl', suffix: 'Bio_Izquierda',        chipId: 'chip-izquierda', ticks: [38,39,40,41,42,43,44,45,46,47,48,49,50,51,52] },
+        { key: 'derecha',   propB64: 'firma1DerechaBase64',   propUrl: 'firma1DerechaUrl',   suffix: 'Bio_Derecha',          chipId: 'chip-derecha',   ticks: [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22] }
+      ];
+      let currentBioStepIndex = 0;
+      let bioHoldCounter = 0;
+      let neutralNoseRatioY = null; 
+
+      function actualizarTicksAnillo(activeIndices = [], completedIndices = [], allGreen = false) {
+        const lines = document.querySelectorAll('#faceTicksSvg .tick-line');
+        lines.forEach(line => {
+          const idx = parseInt(line.getAttribute('data-tick-index'), 10);
+          line.classList.remove('active-target', 'completed');
+          if (allGreen || completedIndices.includes(idx)) line.classList.add('completed');
+          else if (activeIndices.includes(idx)) line.classList.add('active-target');
+        });
+      }
+
+      function configurarPildoraFacial(texto, iconClass = null) {
+        const pill = document.getElementById('faceFloatingPill');
+        const icon = document.getElementById('facePillIcon');
+        const span = document.getElementById('facePillText');
+        if (!pill || !icon || !span) return;
+        span.innerText = texto;
+        if (iconClass) {
+          pill.classList.remove('centered-text');
+          icon.className = 'fas ' + iconClass;
+          icon.classList.remove('hidden');
+        } else {
+          pill.classList.add('centered-text');
+          icon.classList.add('hidden');
+        }
+      }
+
+      async function asegurarModelosFaciales() {
+        if (isFaceApiLoaded || isFaceApiLoading) return;
+        if (typeof faceapi === 'undefined') return;
+        isFaceApiLoading = true;
+        try {
+          const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+          await Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+            faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL)
+          ]);
+          isFaceApiLoaded = true;
+        } catch (e) {
+          console.error("Error al cargar modelos faciales:", e);
+        } finally {
+          isFaceApiLoading = false;
+        }
+      }
+
+      async function abrirEscannerInmersivo(modo, fallbackInputId) {
+        cerrarCamaraGlobal();
+        activeScannerMode = modo;
+        await asegurarModelosFaciales();
+
+        const modal = document.getElementById('scannerOverlayModal');
+        const faceBox = document.getElementById('faceScannerContainer');
+        const docBox = document.getElementById('docScannerContainer');
+        const docFrame = document.getElementById('docViewportFrame');
+        const btnManual = document.getElementById('btnManualCaptureScanner');
+        const titleEl = document.getElementById('scannerMainTitle');
+        const subEl = document.getElementById('scannerSubTitle');
+
+        document.getElementById('faceSuccessCover').classList.remove('show');
+        document.getElementById('docSuccessCover').classList.remove('show');
+        document.getElementById('faceCircleViewport').classList.remove('ready-green');
+        document.getElementById('faceFloatingPill').classList.remove('hidden');
+        document.getElementById('docFloatingPill').classList.remove('hidden');
+
+        const isFaceMode = (modo === 'bio5' || modo === 'selfieFinal');
+        const facingMode = isFaceMode ? 'user' : 'environment';
+
+        if (isFaceMode) {
+          faceBox.classList.remove('hidden');
+          docBox.classList.add('hidden');
+          btnManual.classList.add('hidden');
+          currentBioStepIndex = 0;
+          bioHoldCounter = 0;
+          neutralNoseRatioY = null;
+          actualizarTicksAnillo([], [], false);
+          titleEl.innerText = 'Centra tu cara en el círculo';
+          subEl.innerText = 'Mantén una expresión natural y no sonría.';
+          configurarPildoraFacial('Iniciando cámara...', null);
+        } else {
+          faceBox.classList.add('hidden');
+          docBox.classList.remove('hidden');
+          btnManual.classList.remove('hidden');
+
+          if (modo === 'frontal') {
+            titleEl.innerText = 'Parte frontal';
+            subEl.innerText = 'Muestre la parte frontal de su INE a la cámara.';
+            docFrame.classList.remove('vertical-doc');
+          } else if (modo === 'trasera') {
+            titleEl.innerText = 'Parte trasera';
+            subEl.innerText = 'Muestre la parte trasera del documento a cámara.';
+            docFrame.classList.remove('vertical-doc');
+          } else {
+            titleEl.innerText = 'Comprobante de domicilio';
+            subEl.innerText = 'Encuadre su recibo de forma clara y legible.';
+            docFrame.classList.add('vertical-doc');
+          }
+          document.getElementById('docPillText').innerText = 'Centra el documento en el marco';
+        }
+
+        modal.classList.remove('hidden');
+        const constraints = { audio: false, video: { facingMode: facingMode, width: { ideal: isFaceMode ? 1280 : 1920 }, height: { ideal: isFaceMode ? 720 : 1080 } } };
+
+        try {
+          activeCamStream = await navigator.mediaDevices.getUserMedia(constraints);
+          const videoEl = document.getElementById(isFaceMode ? 'videoScannerFace' : 'videoScannerDoc');
+          videoEl.srcObject = activeCamStream;
+          isDetectionRunning = true;
+          lastFrameData = null;
+          stableFramesCount = 0;
+
+          videoEl.onloadedmetadata = () => {
+            videoEl.play().catch(() => {});
+            if (modo === 'bio5') ejecutarBiometria5Pasos(videoEl);
+            else if (modo === 'selfieFinal') ejecutarSelfieUnicaFinal(videoEl);
+            else ejecutarEscaneoDocumento(videoEl, modo);
+          };
+        } catch (err) {
+          cerrarCamaraGlobal();
+          Swal.fire({
+            icon: 'info', title: 'Cámara no disponible', text: 'Puedes tomar la fotografía usando la cámara nativa de tu teléfono.',
+            showCancelButton: true, confirmButtonText: 'Abrir cámara', cancelButtonText: 'Cancelar', confirmButtonColor: '#439859'
+          }).then((res) => { if (res.isConfirmed && fallbackInputId) document.getElementById(fallbackInputId).click(); });
+        }
+      }
+
+      function cerrarCamaraGlobal() {
+        isDetectionRunning = false;
+        if (activeCamStream) { activeCamStream.getTracks().forEach(t => t.stop()); activeCamStream = null; }
+        document.getElementById('scannerOverlayModal')?.classList.add('hidden');
+      }
+
+      function extraerFrameSelfieBase64(videoEl, maxDim = 960) {
+        const canvas = document.getElementById('hiddenCaptureCanvas');
+        let w = videoEl.videoWidth || 720; let h = videoEl.videoHeight || 720;
+        if (w > maxDim || h > maxDim) { if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; } else { w = Math.round((w * maxDim) / h); h = maxDim; } }
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.save(); ctx.translate(w, 0); ctx.scale(-1, 1); ctx.drawImage(videoEl, 0, 0, w, h); ctx.restore();
+        return canvas.toDataURL('image/jpeg', 0.80);
+      }
+
+      async function ejecutarBiometria5Pasos(video) {
+        if (!isDetectionRunning || activeScannerMode !== 'bio5') return;
+        if (!isFaceApiLoaded) {
+          configurarPildoraFacial('Preparando sensor biométrico...', null);
+          setTimeout(() => { if (isDetectionRunning && !isFaceApiLoaded) document.getElementById('btnManualCaptureScanner').classList.remove('hidden'); }, 4000);
+          setTimeout(() => ejecutarBiometria5Pasos(video), 350);
+          return;
+        }
+
+        let ticksCompletados = [];
+        for (let i = 0; i < currentBioStepIndex; i++) ticksCompletados = ticksCompletados.concat(BIO_STEPS[i].ticks);
+        const pasoActual = BIO_STEPS[currentBioStepIndex];
+        actualizarTicksAnillo(pasoActual.ticks, ticksCompletados, false);
+
+        try {
+          const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.45 })).withFaceLandmarks(true);
+          if (!det) {
+            bioHoldCounter = 0; document.getElementById('faceCircleViewport').classList.remove('ready-green'); configurarPildoraFacial('Coloca tu rostro dentro del círculo', null);
+          } else {
+            const vw = video.videoWidth || 640; const vh = video.videoHeight || 480; const box = det.detection.box; const faceRatio = box.width / Math.min(vw, vh);
+            if (faceRatio > 0.78) { bioHoldCounter = 0; configurarPildoraFacial('Aléjate un poco', null); }
+            else if (faceRatio < 0.26) { bioHoldCounter = 0; configurarPildoraFacial('Acércate un poco', null); }
+            else {
+              const pos = det.landmarks.positions; const nose = pos[30]; const leftJaw = pos[0]; const rightJaw = pos[16]; const chin = pos[8]; const leftEye = pos[36]; const rightEye = pos[45];
+              const faceWidth = Math.max(1, rightJaw.x - leftJaw.x); const yawRatio = (nose.x - leftJaw.x) / faceWidth;
+              const eyesMidY = (leftEye.y + rightEye.y) / 2; const lowerFaceH = Math.max(1, chin.y - eyesMidY);
+              const pitchRatio = (nose.y - eyesMidY) / lowerFaceH; const basePitch = neutralNoseRatioY || 0.36;
+              let cumplePose = false;
+
+              if (pasoActual.key === 'frente') {
+                document.getElementById('scannerMainTitle').innerText = 'Centra tu cara en el círculo'; document.getElementById('scannerSubTitle').innerText = 'Mantén una expresión natural y no sonría.';
+                if (yawRatio > 0.41 && yawRatio < 0.59 && pitchRatio > 0.27 && pitchRatio < 0.47) {
+                  cumplePose = true; document.getElementById('faceCircleViewport').classList.add('ready-green'); configurarPildoraFacial('Mantén la posición...', null);
+                } else { document.getElementById('faceCircleViewport').classList.remove('ready-green'); configurarPildoraFacial('Mira de frente a la cámara', null); }
+              } else if (pasoActual.key === 'abajo') {
+                document.getElementById('scannerMainTitle').innerText = 'Movimientos de cabeza'; document.getElementById('scannerSubTitle').innerText = 'Coloca tu cara al centro y mira a la cámara'; configurarPildoraFacial('Mueve la cabeza\nhacia abajo', 'fa-arrow-down');
+                if (pitchRatio > basePitch + 0.045 || (box.y + box.height / 2) > vh * 0.56) cumplePose = true;
+              } else if (pasoActual.key === 'arriba') {
+                configurarPildoraFacial('Mueve la cabeza\nhacia arriba', 'fa-arrow-up');
+                if (pitchRatio < basePitch - 0.038 || (box.y + box.height / 2) < vh * 0.43) cumplePose = true;
+              } else if (pasoActual.key === 'izquierda') {
+                configurarPildoraFacial('Mueve la cabeza\na la izquierda', 'fa-arrow-left');
+                if (yawRatio > 0.56) cumplePose = true;
+              } else if (pasoActual.key === 'derecha') {
+                configurarPildoraFacial('Mueve la cabeza\na la derecha', 'fa-arrow-right');
+                if (yawRatio < 0.44) cumplePose = true;
+              }
+
+              if (cumplePose) {
+                bioHoldCounter++;
+                if (bioHoldCounter >= 2) {
+                  if (pasoActual.key === 'frente') neutralNoseRatioY = pitchRatio; 
+                  const frameB64 = extraerFrameSelfieBase64(video, 920);
+                  solicitudData[pasoActual.propB64] = frameB64;
+                  document.getElementById(pasoActual.chipId)?.classList.add('done');
+                  dispararSubidaSegundoPlano(pasoActual.propB64, pasoActual.propUrl, pasoActual.suffix, pasoActual.key === 'frente' ? 'badgeFirma1' : null);
+                  if (navigator.vibrate) navigator.vibrate(35);
+                  currentBioStepIndex++; bioHoldCounter = 0;
+                  if (currentBioStepIndex >= BIO_STEPS.length) { finalizarExitoBiometrico5Pasos(); return; }
+                }
+              } else { bioHoldCounter = 0; }
+            }
+          }
+        } catch (err) { console.warn("Lectura facial:", err); }
+        if (isDetectionRunning && activeScannerMode === 'bio5') setTimeout(() => requestAnimationFrame(() => ejecutarBiometria5Pasos(video)), 160);
+      }
+
+      function finalizarExitoBiometrico5Pasos() {
+        isDetectionRunning = false; actualizarTicksAnillo([], [], true); 
+        document.getElementById('faceCircleViewport').classList.add('ready-green');
+        document.getElementById('faceFloatingPill').classList.add('hidden');
+        document.getElementById('faceSuccessCover').classList.add('show');
+        if (navigator.vibrate) navigator.vibrate([40, 60, 80]);
+        const frontalB64 = solicitudData.firma1Base64;
+        if (frontalB64) {
+          document.getElementById('exampleFirma1').style.display = 'none';
+          const prev = document.getElementById('previewFirma1');
+          prev.src = frontalB64; prev.style.display = 'block';
+          document.getElementById('slotFirma1').classList.add('has-image');
+          document.getElementById('btnOpenCamFirma1').innerHTML = '<i class="fas fa-redo"></i> Volver a escanear rostro';
+        }
+        guardarEstadoEnSesion();
+        setTimeout(() => { cerrarCamaraGlobal(); }, 1150);
+      }
+
+      async function ejecutarSelfieUnicaFinal(video) {
+        if (!isDetectionRunning || activeScannerMode !== 'selfieFinal') return;
+        if (!isFaceApiLoaded) {
+          configurarPildoraFacial('Mira de frente a la cámara', null); document.getElementById('btnManualCaptureScanner').classList.remove('hidden'); return;
+        }
+        try {
+          const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.45 }));
+          if (!det) { bioHoldCounter = 0; document.getElementById('faceCircleViewport').classList.remove('ready-green'); configurarPildoraFacial('Centra tu cara en el círculo', null); }
+          else {
+            const vw = video.videoWidth || 640; const vh = video.videoHeight || 480; const faceRatio = det.box.width / Math.min(vw, vh);
+            if (faceRatio > 0.78) { bioHoldCounter = 0; configurarPildoraFacial('Aléjate un poco', null); }
+            else if (faceRatio < 0.25) { bioHoldCounter = 0; configurarPildoraFacial('Acércate un poco', null); }
+            else {
+              document.getElementById('faceCircleViewport').classList.add('ready-green'); configurarPildoraFacial('Mantén tu rostro fijo...', null); bioHoldCounter++;
+              if (bioHoldCounter >= 4) {
+                isDetectionRunning = false; const dataUrl = extraerFrameSelfieBase64(video, 1000);
+                guardarUIFoto('firmaFinalBase64', 'firmaFinalUrl', 'Firma_Final', dataUrl, 'previewFirmaFinal', 'exampleFirmaFinal', 'slotFirmaFinal', 'btnOpenCamFirmaFinal', 'badgeFirmaFinal');
+                actualizarTicksAnillo([], [], true); document.getElementById('faceFloatingPill').classList.add('hidden'); document.getElementById('faceSuccessCover').classList.add('show');
+                if (navigator.vibrate) navigator.vibrate(60);
+                setTimeout(() => cerrarCamaraGlobal(), 1000); return;
+              }
+            }
+          }
+        } catch (e) { document.getElementById('btnManualCaptureScanner').classList.remove('hidden'); }
+        if (isDetectionRunning && activeScannerMode === 'selfieFinal') setTimeout(() => requestAnimationFrame(() => ejecutarSelfieUnicaFinal(video)), 180);
+      }
+
+      function ejecutarEscaneoDocumento(video, modoDoc) {
+        if (!isDetectionRunning || activeScannerMode !== modoDoc) return;
+        const pill = document.getElementById('docFloatingPill'); const pillText = document.getElementById('docPillText');
+        const ctx = stabilityCanvas.getContext('2d', { willReadFrequently: true }); ctx.drawImage(video, 0, 0, SAMPLE_W, SAMPLE_H);
+        const currentFrame = ctx.getImageData(0, 0, SAMPLE_W, SAMPLE_H);
+        let contrastSum = 0;
+        for (let i = 5; i < currentFrame.data.length - 4; i += 8) contrastSum += Math.abs(currentFrame.data[i] - currentFrame.data[i - 4]);
+        const avgContrast = contrastSum / (SAMPLE_W * SAMPLE_H / 2);
+
+        if (lastFrameData) {
+          let totalDiff = 0; const totalPixels = SAMPLE_W * SAMPLE_H;
+          for (let i = 1; i < currentFrame.data.length; i += 4) totalDiff += Math.abs(currentFrame.data[i] - lastFrameData.data[i]);
+          const avgMotion = totalDiff / totalPixels;
+          if (avgContrast < 3.5) { stableFramesCount = 0; pill.classList.remove('hidden'); pillText.innerText = 'Centra el documento en el marco'; }
+          else if (avgMotion < 5.8) {
+            stableFramesCount++;
+            if (stableFramesCount >= 3) pillText.innerText = 'Mantén firme... capturando';
+            if (stableFramesCount >= 7) { capturarDocumentoActualDesdeModal(); return; }
+          } else { stableFramesCount = 0; pill.classList.remove('hidden'); pillText.innerText = 'Centra el documento en el marco'; }
+        }
+        lastFrameData = currentFrame;
+        if (isDetectionRunning && activeScannerMode === modoDoc) setTimeout(() => requestAnimationFrame(() => ejecutarEscaneoDocumento(video, modoDoc)), 150);
+      }
+
+      function capturarDocumentoActualDesdeModal() {
+        if (!activeCamStream) return;
+        isDetectionRunning = false;
+        const video = document.getElementById('videoScannerDoc'); const canvas = document.getElementById('hiddenCaptureCanvas');
+        const vw = video.videoWidth || 1280; const vh = video.videoHeight || 720;
+        const targetAspect = (activeScannerMode === 'comprobante') ? (3 / 4) : (85 / 54); const videoAspect = vw / vh;
+        let sx = 0, sy = 0, sw = vw, sh = vh;
+        if (videoAspect > targetAspect) { sw = Math.round(vh * targetAspect); sx = Math.round((vw - sw) / 2); }
+        else { sh = Math.round(vw / targetAspect); sy = Math.round((vh - sh) / 2); }
+        const maxOut = 1500; let outW = sw, outH = sh;
+        if (outW > maxOut || outH > maxOut) {
+          if (outW > outH) { outH = Math.round((outH * maxOut) / outW); outW = maxOut; }
+          else { outW = Math.round((outW * maxOut) / outH); outH = maxOut; }
+        }
+        canvas.width = outW; canvas.height = outH;
+        const ctx = canvas.getContext('2d'); ctx.drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+        let propBase64 = (activeScannerMode === 'frontal') ? 'ineFrontalBase64' : (activeScannerMode === 'trasera') ? 'ineTraseraBase64' : 'comprobanteBase64';
+        let propUrl    = (activeScannerMode === 'frontal') ? 'ineFrontalUrl'    : (activeScannerMode === 'trasera') ? 'ineTraseraUrl'    : 'comprobanteUrl';
+        let suffix     = (activeScannerMode === 'frontal') ? 'INE_Frontal'      : (activeScannerMode === 'trasera') ? 'INE_Trasera'      : 'Comprobante';
+        let pref       = (activeScannerMode === 'frontal') ? 'IneFrontal'       : (activeScannerMode === 'trasera') ? 'IneTrasera'       : 'Comprobante';
+        guardarUIFoto(propBase64, propUrl, suffix, dataUrl, `preview${pref}`, `example${pref}`, `slot${pref}`, `btnOpenCam${pref}`, `badge${pref}`);
+
+        document.getElementById('docFloatingPill').classList.add('hidden');
+        document.getElementById('docSuccessCover').classList.add('show');
+        if (navigator.vibrate) navigator.vibrate(50);
+        setTimeout(() => cerrarCamaraGlobal(), 850);
+      }
+
+      function guardarUIFoto(propBase64, propUrl, suffix, dataUrl, previewId, exampleId, slotId, btnId, badgeId) {
+        solicitudData[propBase64] = dataUrl;
+        document.getElementById(exampleId).style.display = 'none';
+        const previewEl = document.getElementById(previewId);
+        previewEl.src = dataUrl; previewEl.style.display = 'block';
+        document.getElementById(slotId).classList.add('has-image');
+        document.getElementById(btnId).innerHTML = '<i class="fas fa-redo"></i> Volver a capturar';
+        guardarEstadoEnSesion();
+        dispararSubidaSegundoPlano(propBase64, propUrl, suffix, badgeId);
+      }
+
+      function manejarArchivo(e, propBase64, propUrl, suffix, previewId, exampleId, slotId, btnId, badgeId) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const r = new FileReader();
+        r.onload = async (evt) => {
+          try {
+            const maxDim = propBase64.includes('firma') ? 1000 : 1500;
+            const comprimida = await comprimirImagenDataUrl(evt.target.result, maxDim, 0.80);
+            guardarUIFoto(propBase64, propUrl, suffix, comprimida, previewId, exampleId, slotId, btnId, badgeId);
+            if (propBase64 === 'firma1Base64') marcarChipsBiometricosCompletos();
+          } catch (err) { Swal.fire('Error', 'No se pudo procesar la imagen.', 'error'); }
+        };
+        r.readAsDataURL(file);
+      }
+
+      function abrirCamaraDocs(tipo) {
+        let fallback = (tipo === 'frontal') ? 'fileIneFrontalFallback' : (tipo === 'trasera') ? 'fileIneTraseraFallback' : 'fileComprobanteFallback';
+        abrirEscannerInmersivo(tipo, fallback);
+      }
+
+      // Asignar Eventos a Botones de Fallback de Cámara Manual
+      document.addEventListener("DOMContentLoaded", () => {
+        const btnOpenCamFirma1 = document.getElementById('btnOpenCamFirma1');
+        if (btnOpenCamFirma1) btnOpenCamFirma1.addEventListener('click', () => abrirEscannerInmersivo('bio5', 'fileFirma1Fallback'));
+        
+        const fileFirma1Fallback = document.getElementById('fileFirma1Fallback');
+        if (fileFirma1Fallback) fileFirma1Fallback.addEventListener('change', (e) => manejarArchivo(e, 'firma1Base64', 'firma1Url', 'Firma_Inicial_Frente', 'previewFirma1', 'exampleFirma1', 'slotFirma1', 'btnOpenCamFirma1', 'badgeFirma1'));
+
+        const btnOpenCamFirmaFinal = document.getElementById('btnOpenCamFirmaFinal');
+        if (btnOpenCamFirmaFinal) btnOpenCamFirmaFinal.addEventListener('click', () => abrirEscannerInmersivo('selfieFinal', 'fileFirmaFinalFallback'));
+        
+        const fileFirmaFinalFallback = document.getElementById('fileFirmaFinalFallback');
+        if (fileFirmaFinalFallback) fileFirmaFinalFallback.addEventListener('change', (e) => manejarArchivo(e, 'firmaFinalBase64', 'firmaFinalUrl', 'Firma_Final', 'previewFirmaFinal', 'exampleFirmaFinal', 'slotFirmaFinal', 'btnOpenCamFirmaFinal', 'badgeFirmaFinal'));
+
+        const btnManualCaptureScanner = document.getElementById('btnManualCaptureScanner');
+        if (btnManualCaptureScanner) {
+          btnManualCaptureScanner.addEventListener('click', () => {
+            if (['frontal', 'trasera', 'comprobante'].includes(activeScannerMode)) capturarDocumentoActualDesdeModal();
+            else if (activeScannerMode === 'selfieFinal') {
+              const video = document.getElementById('videoScannerFace'); const dataUrl = extraerFrameSelfieBase64(video, 1000);
+              guardarUIFoto('firmaFinalBase64', 'firmaFinalUrl', 'Firma_Final', dataUrl, 'previewFirmaFinal', 'exampleFirmaFinal', 'slotFirmaFinal', 'btnOpenCamFirmaFinal', 'badgeFirmaFinal');
+              cerrarCamaraGlobal();
+            } else if (activeScannerMode === 'bio5') {
+              const video = document.getElementById('videoScannerFace'); const frameB64 = extraerFrameSelfieBase64(video, 920);
+              solicitudData.firma1Base64 = frameB64; marcarChipsBiometricosCompletos(); dispararSubidaSegundoPlano('firma1Base64', 'firma1Url', 'Firma_Inicial_Frente', 'badgeFirma1');
+              finalizarExitoBiometrico5Pasos();
+            }
+          });
+        }
+
+        const fileIneFrontalFallback = document.getElementById('fileIneFrontalFallback');
+        if (fileIneFrontalFallback) fileIneFrontalFallback.addEventListener('change', (e) => manejarArchivo(e, 'ineFrontalBase64', 'ineFrontalUrl', 'INE_Frontal', 'previewIneFrontal', 'exampleIneFrontal', 'slotIneFrontal', 'btnOpenCamIneFrontal', 'badgeIneFrontal'));
+        
+        const fileIneTraseraFallback = document.getElementById('fileIneTraseraFallback');
+        if (fileIneTraseraFallback) fileIneTraseraFallback.addEventListener('change', (e) => manejarArchivo(e, 'ineTraseraBase64', 'ineTraseraUrl', 'INE_Trasera', 'previewIneTrasera', 'exampleIneTrasera', 'slotIneTrasera', 'btnOpenCamIneTrasera', 'badgeIneTrasera'));
+        
+        const fileComprobanteFallback = document.getElementById('fileComprobanteFallback');
+        if (fileComprobanteFallback) fileComprobanteFallback.addEventListener('change', (e) => manejarArchivo(e, 'comprobanteBase64', 'comprobanteUrl', 'Comprobante', 'previewComprobante', 'exampleComprobante', 'slotComprobante', 'btnOpenCamComprobante', 'badgeComprobante'));
+      });
 
     </script>
   </body>
