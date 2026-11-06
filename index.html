@@ -10,7 +10,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
     
     <style>
-      /* --- SISTEMA DE DISEÑO APPLE / PRESTAJARA (EDGE-TO-EDGE) --- */
+      /* --- SISTEMA DE DISEÑO APPLE / PRESTAJARA (INTACTO EN MÓVIL) --- */
       :root {
         --verde-jara: #439859;
         --verde-jara-dark: #347a46;
@@ -45,13 +45,6 @@
         margin: 0;
       }
 
-      @media (min-width: 700px) {
-        body {
-          background: var(--bg-page);
-          padding: 24px 16px;
-        }
-      }
-
       .app-shell {
         width: 100%;
         max-width: 580px;
@@ -61,15 +54,6 @@
         display: flex;
         flex-direction: column;
         position: relative;
-      }
-
-      @media (min-width: 700px) {
-        .app-shell {
-          min-height: auto;
-          border-radius: 28px;
-          overflow: hidden;
-          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
-        }
       }
 
       .hidden { display: none !important; }
@@ -88,7 +72,7 @@
         40%, 60% { transform: translate3d(4px, 0, 0); }
       }
 
-      /* --- ENCABEZADO CURVO PRESTAJARA + BANNER DE INSTRUCCIÓN --- */
+      /* --- ENCABEZADO CURVO PRESTAJARA + BANNER DE INSTRUCCIÓN (MÓVIL) --- */
       .top-brand-bar {
         background: var(--verde-jara);
         color: #ffffff;
@@ -151,14 +135,10 @@
         line-height: 1.4;
       }
 
-      /* --- CONTENEDOR DE CONTENIDO SIN FRANJAS LATERALES --- */
+      /* --- CONTENEDOR DE CONTENIDO MÓVIL --- */
       .view-body {
         padding: 20px 18px 120px; 
         flex: 1;
-      }
-
-      @media (min-width: 600px) {
-        .view-body { padding: 28px 32px 80px; } 
       }
 
       .btn-regresar {
@@ -374,7 +354,7 @@
       }
       .btn-secundario:hover { background: #daf0e1; }
 
-      /* --- SKELETON LOADER (MEJORADO CON TEXTO Y SPINNER) --- */
+      /* --- SKELETON LOADER --- */
       .skeleton-box {
         display: flex;
         align-items: center;
@@ -399,9 +379,7 @@
         animation: spin 0.8s linear infinite;
         z-index: 2;
       }
-      .sk-text {
-        z-index: 2;
-      }
+      .sk-text { z-index: 2; }
       .skeleton-box::after {
         position: absolute;
         top: 0; right: 0; bottom: 0; left: 0;
@@ -444,6 +422,10 @@
         margin-bottom: 20px;
         line-height: 1.5;
         text-align: justify;
+      }
+
+      .docs-grid-container {
+        display: block;
       }
 
       .photo-slot {
@@ -543,6 +525,14 @@
         overflow-y: auto;
       }
 
+      .scanner-modal-inner {
+        width: 100%;
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        background: #ffffff;
+      }
+
       .scanner-stage-body {
         flex: 1;
         display: flex;
@@ -609,7 +599,7 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        transform: scaleX(-1); /* Espejo natural para selfies */
+        transform: scaleX(-1);
       }
 
       /* --- TARJETA FLOTANTE DENTRO DEL CÍRCULO / DOCUMENTO --- */
@@ -727,6 +717,146 @@
         justify-content: center;
         width: 100%;
         max-width: 340px;
+      }
+
+      /* ==========================================================================
+         DISEÑO PARA TABLET Y COMPUTADORA (>= 768px) — OPCIÓN A PORTAL INSTITUCIONAL
+         (No afecta en absoluto a pantallas móviles < 768px)
+         ========================================================================== */
+      @media (min-width: 768px) {
+        html, body {
+          background: #f0f4f8;
+        }
+
+        .app-shell {
+          max-width: 100%;
+          background: transparent;
+          min-height: 100vh;
+          padding-bottom: 60px;
+        }
+
+        /* Franja Verde Institucional Full-Width con curva panorámica suave */
+        .app-shell > .top-brand-bar {
+          width: 100%;
+          padding: 26px 32px 36px;
+          border-bottom-left-radius: 50% 34px;
+          border-bottom-right-radius: 50% 34px;
+          box-shadow: 0 4px 20px rgba(67, 152, 89, 0.18);
+        }
+
+        .app-shell > .top-brand-bar .top-brand-title {
+          font-size: 1.85rem;
+          letter-spacing: -0.5px;
+        }
+
+        .app-shell > .top-brand-bar .step-progress-track {
+          max-width: 340px;
+          height: 5px;
+          margin-top: 14px;
+        }
+
+        /* Banner Azul Hielo Full-Width centrado */
+        .app-shell > .instruction-banner {
+          width: 100%;
+          margin-top: -28px;
+          padding: 48px 32px 38px;
+          text-align: center;
+          border-bottom: 1px solid #dbeafe;
+          box-shadow: 0 4px 12px rgba(10, 61, 98, 0.03);
+        }
+
+        .app-shell > .instruction-banner h2 {
+          font-size: 1.75rem;
+          max-width: 780px;
+          margin: 0 auto 6px;
+        }
+
+        .app-shell > .instruction-banner p {
+          font-size: 1.02rem;
+          max-width: 680px;
+          margin: 0 auto;
+        }
+
+        /* Tarjeta Ejecutiva Flotante para el Formulario */
+        .app-container {
+          width: 92%;
+          max-width: 780px;
+          margin: -18px auto 0;
+          background: var(--surface-white);
+          border-radius: 24px;
+          box-shadow: 0 18px 45px rgba(10, 61, 98, 0.08), 0 2px 10px rgba(0, 0, 0, 0.03);
+          border: 1px solid rgba(226, 238, 252, 0.9);
+          position: relative;
+          z-index: 4;
+          overflow: hidden;
+        }
+
+        /* En la vista de documentos ampliamos la tarjeta en PC para lucir las 3 columnas */
+        .app-container:has(#vista-documentos:not(.hidden)) {
+          max-width: 980px;
+        }
+
+        .view-body {
+          padding: 36px 48px 48px;
+        }
+
+        /* Botones principales centrados y proporcionados en monitor */
+        .view-body > .btn-accion {
+          max-width: 420px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .view-body > .skeleton-box {
+          max-width: 420px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        /* Cuadrícula de 3 Columnas para Documentos en Computadora */
+        @media (min-width: 900px) {
+          .docs-grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            align-items: stretch;
+            margin-bottom: 10px;
+          }
+
+          .docs-grid-container .photo-slot {
+            margin-bottom: 0;
+            justify-content: space-between;
+            padding: 22px 16px;
+          }
+
+          .docs-grid-container .example-image,
+          .docs-grid-container .preview-image {
+            max-height: 175px;
+            margin-top: auto;
+            margin-bottom: 16px;
+          }
+        }
+
+        /* Modal de Cámara / Escáner como Ventana Ejecutiva Centrada en PC */
+        .scanner-overlay-modal {
+          background: rgba(15, 23, 42, 0.65);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+        }
+
+        .scanner-modal-inner {
+          width: 100%;
+          max-width: 540px;
+          min-height: auto;
+          border-radius: 28px;
+          overflow: hidden;
+          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+          max-height: 92vh;
+          overflow-y: auto;
+        }
       }
     </style>
   </head>
@@ -1180,40 +1310,42 @@
             <i class="fas fa-chevron-left"></i> Domicilio
           </button>
 
-          <!-- Tarjeta 1: INE Frontal -->
-          <div class="photo-slot" id="slotIneFrontal">
-            <div class="slot-header"><i class="fas fa-id-card" style="color: var(--verde-jara);"></i> Parte Frontal de tu INE</div>
-            <p class="slot-sub">Revisa el ejemplo y encuadra tu identificación sin reflejos.</p>
-            <div id="badgeIneFrontal" class="upload-badge hidden"></div>
-            <img src="https://drive.google.com/thumbnail?id=1wsHjripfHrMZ9YeVwx1AYXAxiXr0ko2Y&sz=w600" class="example-image" id="exampleIneFrontal" alt="Ejemplo INE Frontal">
-            <img src="" class="preview-image" id="previewIneFrontal" alt="Preview INE Frontal">
-            <button type="button" class="btn-accion btn-secundario" id="btnOpenCamIneFrontal" onclick="abrirCamaraDocs('frontal')" style="max-width: 260px;">
-              <i class="fas fa-camera"></i> Continuar y capturar frente
-            </button>
-          </div>
+          <div class="docs-grid-container">
+            <!-- Tarjeta 1: INE Frontal -->
+            <div class="photo-slot" id="slotIneFrontal">
+              <div class="slot-header"><i class="fas fa-id-card" style="color: var(--verde-jara);"></i> Parte Frontal de tu INE</div>
+              <p class="slot-sub">Revisa el ejemplo y encuadra tu identificación sin reflejos.</p>
+              <div id="badgeIneFrontal" class="upload-badge hidden"></div>
+              <img src="https://drive.google.com/thumbnail?id=1wsHjripfHrMZ9YeVwx1AYXAxiXr0ko2Y&sz=w600" class="example-image" id="exampleIneFrontal" alt="Ejemplo INE Frontal">
+              <img src="" class="preview-image" id="previewIneFrontal" alt="Preview INE Frontal">
+              <button type="button" class="btn-accion btn-secundario" id="btnOpenCamIneFrontal" onclick="abrirCamaraDocs('frontal')" style="max-width: 260px;">
+                <i class="fas fa-camera"></i> Capturar frente
+              </button>
+            </div>
 
-          <!-- Tarjeta 2: INE Trasera -->
-          <div class="photo-slot" id="slotIneTrasera">
-            <div class="slot-header"><i class="fas fa-id-card" style="color: var(--verde-jara);"></i> Parte Trasera de tu INE</div>
-            <p class="slot-sub">Asegúrate de que los códigos QR y texto trasero se vean claros.</p>
-            <div id="badgeIneTrasera" class="upload-badge hidden"></div>
-            <img src="https://drive.google.com/thumbnail?id=1rB9XjaHn7Ur3Hf0qOo4pB2G9xioMFpk4&sz=w600" class="example-image" id="exampleIneTrasera" alt="Ejemplo INE Trasera">
-            <img src="" class="preview-image" id="previewIneTrasera" alt="Preview INE Trasera">
-            <button type="button" class="btn-accion btn-secundario" id="btnOpenCamIneTrasera" onclick="abrirCamaraDocs('trasera')" style="max-width: 260px;">
-              <i class="fas fa-camera"></i> Continuar y capturar reverso
-            </button>
-          </div>
+            <!-- Tarjeta 2: INE Trasera -->
+            <div class="photo-slot" id="slotIneTrasera">
+              <div class="slot-header"><i class="fas fa-id-card" style="color: var(--verde-jara);"></i> Parte Trasera de tu INE</div>
+              <p class="slot-sub">Asegúrate de que los códigos QR y texto trasero se vean claros.</p>
+              <div id="badgeIneTrasera" class="upload-badge hidden"></div>
+              <img src="https://drive.google.com/thumbnail?id=1rB9XjaHn7Ur3Hf0qOo4pB2G9xioMFpk4&sz=w600" class="example-image" id="exampleIneTrasera" alt="Ejemplo INE Trasera">
+              <img src="" class="preview-image" id="previewIneTrasera" alt="Preview INE Trasera">
+              <button type="button" class="btn-accion btn-secundario" id="btnOpenCamIneTrasera" onclick="abrirCamaraDocs('trasera')" style="max-width: 260px;">
+                <i class="fas fa-camera"></i> Capturar reverso
+              </button>
+            </div>
 
-          <!-- Tarjeta 3: Comprobante -->
-          <div class="photo-slot" id="slotComprobante">
-            <div class="slot-header"><i class="fas fa-file-invoice" style="color: var(--verde-jara);"></i> Comprobante de Domicilio</div>
-            <p class="slot-sub">Recibo de luz, agua o teléfono reciente y legible.</p>
-            <div id="badgeComprobante" class="upload-badge hidden"></div>
-            <img src="https://drive.google.com/thumbnail?id=1sgGRe5bD7L9SRl4JMJ7Nq7rz3lWMIJt5&sz=w600" class="example-image" id="exampleComprobante" alt="Ejemplo Comprobante">
-            <img src="" class="preview-image" id="previewComprobante" alt="Preview Comprobante">
-            <button type="button" class="btn-accion btn-secundario" id="btnOpenCamComprobante" onclick="abrirCamaraDocs('comprobante')" style="max-width: 260px;">
-              <i class="fas fa-camera"></i> Continuar y capturar recibo
-            </button>
+            <!-- Tarjeta 3: Comprobante -->
+            <div class="photo-slot" id="slotComprobante">
+              <div class="slot-header"><i class="fas fa-file-invoice" style="color: var(--verde-jara);"></i> Comprobante de Domicilio</div>
+              <p class="slot-sub">Recibo de luz, agua o teléfono reciente y legible.</p>
+              <div id="badgeComprobante" class="upload-badge hidden"></div>
+              <img src="https://drive.google.com/thumbnail?id=1sgGRe5bD7L9SRl4JMJ7Nq7rz3lWMIJt5&sz=w600" class="example-image" id="exampleComprobante" alt="Ejemplo Comprobante">
+              <img src="" class="preview-image" id="previewComprobante" alt="Preview Comprobante">
+              <button type="button" class="btn-accion btn-secundario" id="btnOpenCamComprobante" onclick="abrirCamaraDocs('comprobante')" style="max-width: 260px;">
+                <i class="fas fa-camera"></i> Capturar recibo
+              </button>
+            </div>
           </div>
 
           <input type="file" id="fileIneFrontalFallback" accept="image/*" capture="environment" style="display: none;">
@@ -1320,7 +1452,7 @@
             <img src="https://drive.google.com/thumbnail?id=1Crz4m8kGZ0Jj3c-dUM6HjlcQyNdNkDHB&sz=w600" class="example-image" id="exampleFirmaFinal" alt="Ejemplo Firma Final">
             <img src="" class="preview-image" id="previewFirmaFinal" alt="Preview Firma Final">
             <button type="button" class="btn-accion btn-secundario" id="btnOpenCamFirmaFinal" style="max-width: 260px;">
-              <i class="fas fa-camera"></i> Continuar y tomar selfie
+              <i class="fas fa-camera"></i> Tomar selfie
             </button>
           </div>
 
@@ -1348,63 +1480,65 @@
          MODAL INMERSIVO PANTALLA COMPLETA (BIOMETRÍA FACE ID & ESCÁNER DOCUMENTOS)
          ========================================================================== -->
     <div id="scannerOverlayModal" class="scanner-overlay-modal hidden">
-      <header class="top-brand-bar">
-        <div class="top-brand-title">PrestaJara</div>
-      </header>
+      <div class="scanner-modal-inner">
+        <header class="top-brand-bar">
+          <div class="top-brand-title">PrestaJara</div>
+        </header>
 
-      <section class="instruction-banner">
-        <h2 id="scannerMainTitle">Centra tu cara en el círculo</h2>
-        <p id="scannerSubTitle">Mantén una expresión natural y no sonría.</p>
-      </section>
+        <section class="instruction-banner">
+          <h2 id="scannerMainTitle">Centra tu cara en el círculo</h2>
+          <p id="scannerSubTitle">Mantén una expresión natural y no sonría.</p>
+        </section>
 
-      <div class="scanner-stage-body">
-        
-        <!-- MODO 1: ESCÁNER FACIAL CIRCULAR CON ANILLO DE 60 TICKS (FACE ID) -->
-        <div id="faceScannerContainer" class="face-scanner-box hidden">
-          <svg id="faceTicksSvg" class="face-ticks-svg" viewBox="0 0 300 300"></svg>
+        <div class="scanner-stage-body">
+          
+          <!-- MODO 1: ESCÁNER FACIAL CIRCULAR CON ANILLO DE 60 TICKS (FACE ID) -->
+          <div id="faceScannerContainer" class="face-scanner-box hidden">
+            <svg id="faceTicksSvg" class="face-ticks-svg" viewBox="0 0 300 300"></svg>
 
-          <div id="faceCircleViewport" class="face-circle-viewport">
-            <video id="videoScannerFace" autoplay playsinline muted></video>
-            
-            <div id="faceFloatingPill" class="floating-pill-prompt centered-text">
-              <i id="facePillIcon" class="fas fa-arrow-down hidden"></i>
-              <span id="facePillText">Iniciando cámara...</span>
-            </div>
+            <div id="faceCircleViewport" class="face-circle-viewport">
+              <video id="videoScannerFace" autoplay playsinline muted></video>
+              
+              <div id="faceFloatingPill" class="floating-pill-prompt centered-text">
+                <i id="facePillIcon" class="fas fa-arrow-down hidden"></i>
+                <span id="facePillText">Iniciando cámara...</span>
+              </div>
 
-            <div id="faceSuccessCover" class="face-success-cover">
-              <svg class="checkmark-svg" viewBox="0 0 52 52">
-                <path class="checkmark-path" d="M14 27l8 8 16-16"></path>
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <!-- MODO 2: ESCÁNER RECTANGULAR LIMPIO PARA DOCUMENTOS (INE / COMPROBANTE) -->
-        <div id="docScannerContainer" class="doc-scanner-box hidden">
-          <div id="docViewportFrame" class="doc-viewport-frame">
-            <video id="videoScannerDoc" autoplay playsinline muted></video>
-
-            <div id="docFloatingPill" class="floating-pill-prompt">
-              <span id="docPillText">Centra el documento en el marco</span>
-            </div>
-
-            <div id="docSuccessCover" class="face-success-cover" style="border-radius: 14px;">
-              <svg class="checkmark-svg" viewBox="0 0 52 52">
-                <path class="checkmark-path" d="M14 27l8 8 16-16"></path>
-              </svg>
+              <div id="faceSuccessCover" class="face-success-cover">
+                <svg class="checkmark-svg" viewBox="0 0 52 52">
+                  <path class="checkmark-path" d="M14 27l8 8 16-16"></path>
+                </svg>
+              </div>
             </div>
           </div>
-        </div>
 
-        <canvas id="hiddenCaptureCanvas" class="hidden"></canvas>
+          <!-- MODO 2: ESCÁNER RECTANGULAR LIMPIO PARA DOCUMENTOS (INE / COMPROBANTE) -->
+          <div id="docScannerContainer" class="doc-scanner-box hidden">
+            <div id="docViewportFrame" class="doc-viewport-frame">
+              <video id="videoScannerDoc" autoplay playsinline muted></video>
 
-        <div class="scanner-footer-controls">
-          <button type="button" id="btnManualCaptureScanner" class="btn-accion hidden" style="flex: 1;">
-            <i class="fas fa-camera"></i> Capturar ahora
-          </button>
-          <button type="button" class="btn-accion btn-secundario" onclick="cerrarCamaraGlobal()" style="flex: 1; max-width: 180px;">
-            Cancelar
-          </button>
+              <div id="docFloatingPill" class="floating-pill-prompt">
+                <span id="docPillText">Centra el documento en el marco</span>
+              </div>
+
+              <div id="docSuccessCover" class="face-success-cover" style="border-radius: 14px;">
+                <svg class="checkmark-svg" viewBox="0 0 52 52">
+                  <path class="checkmark-path" d="M14 27l8 8 16-16"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <canvas id="hiddenCaptureCanvas" class="hidden"></canvas>
+
+          <div class="scanner-footer-controls">
+            <button type="button" id="btnManualCaptureScanner" class="btn-accion hidden" style="flex: 1;">
+              <i class="fas fa-camera"></i> Capturar ahora
+            </button>
+            <button type="button" class="btn-accion btn-secundario" onclick="cerrarCamaraGlobal()" style="flex: 1; max-width: 180px;">
+              Cancelar
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1412,7 +1546,7 @@
     <!-- === INICIO DE LA PARTE 3 === -->
     <script>
       // ================= URL DE TU GOOGLE APPS SCRIPT =================
-      const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8tJ9uWa94w9chL3iT892ME2YoDALl5_ihIqTz3veKIMpzqgq5YzHUtxJbrITTsumBcQ/exec';
+      const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxifg5G-wgXxTtAaAKQjOPj4NM0Wt7531OnMm4ofKP-7-SJt391IZyrpHTmABMaE-Ri/exec';
       const SESSION_STORAGE_KEY = 'PRESTAJARA_ACTUALIZACION_STATE_V4';
 
       // ================= ESTADOS GLOBALES Y DATOS =================
@@ -1441,6 +1575,7 @@
       let activeScannerMode = null;
       let pendingUploads = {};
       let isSubmitting = false;
+      let scannerHistoryPushed = false;
 
       let curpValidada = false;
       let cpValidado = false;
@@ -1469,6 +1604,19 @@
         'vista-privacidad-final': { pct: 100, title: 'Aceptación de solicitud', sub: 'Toma tu selfie final para concluir tu trámite.' }
       };
 
+      // Mapa de retorno lógico cuando el usuario presiona "Atrás" en su celular
+      const PREV_VIEW_MAP = {
+        'vista-validacion':       'vista-menu',
+        'vista-otp':              'vista-validacion',
+        'vista-correo-manual':    'vista-validacion',
+        'vista-privacidad-1':     'vista-validacion',
+        'vista-datos-personales': 'vista-privacidad-1',
+        'vista-datos-contacto':   'vista-datos-personales',
+        'vista-documentos':       'vista-datos-contacto',
+        'vista-referencias':      'vista-documentos',
+        'vista-privacidad-final': 'vista-referencias'
+      };
+
       // ================= INICIALIZACIÓN =================
       document.addEventListener("DOMContentLoaded", () => {
         construirAnilloTicksSVG();
@@ -1476,7 +1624,93 @@
         inicializarSelectores();
         inicializarEventosCamaras();
         restaurarSesionGuardada();
+        inicializarControlBotonAtras();
       });
+
+      // ================= CONTROL DE BOTÓN / GESTO "ATRÁS" (ANDROID & iOS) =================
+      function inicializarControlBotonAtras() {
+        const vistaInicial = solicitudData.vistaActual || 'vista-menu';
+        try {
+          window.history.replaceState({ vista: 'vista-menu', rootGuard: true }, '', window.location.pathname);
+          if (vistaInicial !== 'vista-menu') {
+            window.history.pushState({ vista: vistaInicial }, '', '#' + vistaInicial);
+          } else {
+            window.history.pushState({ vista: 'vista-menu' }, '', '#inicio');
+          }
+        } catch (e) {}
+
+        window.addEventListener('popstate', (event) => {
+          // 1. Si el modal de la cámara está abierto, "Atrás" solo cierra la cámara sin retroceder de paso
+          const modal = document.getElementById('scannerOverlayModal');
+          if (modal && !modal.classList.contains('hidden')) {
+            scannerHistoryPushed = false;
+            cerrarCamaraGlobal(true);
+            return;
+          }
+
+          // 2. Si hay una alerta de SweetAlert2 abierta, la cerramos y mantenemos la vista
+          if (typeof Swal !== 'undefined' && Swal.isVisible()) {
+            Swal.close();
+            try {
+              window.history.pushState({ vista: solicitudData.vistaActual }, '', '#' + solicitudData.vistaActual);
+            } catch (e) {}
+            return;
+          }
+
+          const vistaAct = solicitudData.vistaActual || 'vista-menu';
+
+          // 3. Si está en una vista avanzada del formulario, retrocede al paso anterior
+          if (vistaAct !== 'vista-menu') {
+            const vistaAnterior = (event.state && event.state.vista && event.state.vista !== vistaAct)
+              ? event.state.vista
+              : (PREV_VIEW_MAP[vistaAct] || 'vista-menu');
+
+            // Si va a regresar al menú inicial pero ya validó cuenta, preguntar para evitar pérdida accidental
+            if (vistaAnterior === 'vista-menu' && solicitudData.numCliente) {
+              try {
+                window.history.pushState({ vista: vistaAct }, '', '#' + vistaAct);
+              } catch (e) {}
+              Swal.fire({
+                icon: 'question',
+                title: '¿Salir al inicio?',
+                text: 'Tu avance sigue guardado temporalmente en esta sesión.',
+                showCancelButton: true,
+                confirmButtonText: 'Ir al inicio',
+                cancelButtonText: 'Continuar aquí',
+                confirmButtonColor: '#439859'
+              }).then((res) => {
+                if (res.isConfirmed) {
+                  cambiarVista('vista-menu', false, false);
+                }
+              });
+              return;
+            }
+
+            cambiarVista(vistaAnterior, true, false);
+            return;
+          }
+
+          // 4. Si ya está en vista-menu e intenta salir de la página con datos capturados
+          if (solicitudData.numCliente) {
+            try {
+              window.history.pushState({ vista: 'vista-menu' }, '', '#inicio');
+            } catch (e) {}
+            Swal.fire({
+              icon: 'warning',
+              title: '¿Deseas salir del proceso?',
+              text: 'Aún no has enviado tu actualización de datos.',
+              showCancelButton: true,
+              confirmButtonText: 'Permanecer aquí',
+              cancelButtonText: 'Salir',
+              confirmButtonColor: '#439859'
+            }).then((res) => {
+              if (!res.isConfirmed) {
+                window.history.back();
+              }
+            });
+          }
+        });
+      }
 
       function construirAnilloTicksSVG() {
         const svg = document.getElementById('faceTicksSvg');
@@ -1875,7 +2109,7 @@
           if (solicitudData.vistaActual === 'vista-correo-manual') {
             generarCaptcha();
           }
-          cambiarVista(solicitudData.vistaActual, false);
+          cambiarVista(solicitudData.vistaActual, false, false);
         } catch (e) {
           console.warn("No se pudo restaurar la sesión previa:", e);
         }
@@ -1932,8 +2166,8 @@
         cambiarVista(vistaDestino);
       }
 
-      function cambiarVista(idVistaDestino, guardar = true) {
-        cerrarCamaraGlobal();
+      function cambiarVista(idVistaDestino, guardar = true, empujarHistorial = true) {
+        cerrarCamaraGlobal(true);
         document.querySelectorAll('.app-container > div').forEach(div => div.classList.add('hidden'));
         const target = document.getElementById(idVistaDestino);
         if (target) target.classList.remove('hidden');
@@ -1946,8 +2180,17 @@
         }
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        const vistaPrevia = solicitudData.vistaActual;
+        solicitudData.vistaActual = idVistaDestino;
+
+        if (empujarHistorial && vistaPrevia !== idVistaDestino) {
+          try {
+            window.history.pushState({ vista: idVistaDestino }, '', '#' + idVistaDestino);
+          } catch (e) {}
+        }
+
         if (guardar) {
-          solicitudData.vistaActual = idVistaDestino;
           guardarEstadoEnSesion();
         }
       }
@@ -2521,7 +2764,7 @@
       }
 
       async function abrirEscannerInmersivo(modo, fallbackInputId) {
-        cerrarCamaraGlobal();
+        cerrarCamaraGlobal(true);
         activeScannerMode = modo;
         await asegurarModelosFaciales();
 
@@ -2575,6 +2818,15 @@
         }
 
         modal.classList.remove('hidden');
+
+        // Empujar estado al historial para que el botón "Atrás" cierre el modal de cámara
+        if (!scannerHistoryPushed) {
+          try {
+            window.history.pushState({ vista: solicitudData.vistaActual, scannerOpen: true }, '', '#camara');
+            scannerHistoryPushed = true;
+          } catch (e) {}
+        }
+
         const constraints = { audio: false, video: { facingMode: facingMode, width: { ideal: isFaceMode ? 1280 : 1920 }, height: { ideal: isFaceMode ? 720 : 1080 } } };
 
         try {
@@ -2594,16 +2846,25 @@
         } catch (err) {
           cerrarCamaraGlobal();
           Swal.fire({
-            icon: 'info', title: 'Cámara no disponible', text: 'Puedes tomar la fotografía usando la cámara nativa de tu teléfono.',
+            icon: 'info', title: 'Cámara no disponible', text: 'Puedes tomar la fotografía usando la cámara nativa de tu dispositivo.',
             showCancelButton: true, confirmButtonText: 'Abrir cámara', cancelButtonText: 'Cancelar', confirmButtonColor: '#439859'
           }).then((res) => { if (res.isConfirmed && fallbackInputId) document.getElementById(fallbackInputId).click(); });
         }
       }
 
-      function cerrarCamaraGlobal() {
+      function cerrarCamaraGlobal(fromPopState = false) {
         isDetectionRunning = false;
-        if (activeCamStream) { activeCamStream.getTracks().forEach(t => t.stop()); activeCamStream = null; }
+        if (activeCamStream) {
+          activeCamStream.getTracks().forEach(t => t.stop());
+          activeCamStream = null;
+        }
         document.getElementById('scannerOverlayModal')?.classList.add('hidden');
+        if (scannerHistoryPushed && !fromPopState) {
+          scannerHistoryPushed = false;
+          try { window.history.back(); } catch (e) {}
+        } else {
+          scannerHistoryPushed = false;
+        }
       }
 
       function extraerFrameSelfieBase64(videoEl, maxDim = 960) {
