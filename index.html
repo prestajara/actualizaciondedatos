@@ -1576,6 +1576,7 @@
       let pendingUploads = {};
       let isSubmitting = false;
       let scannerHistoryPushed = false;
+      let ignoreNextPopState = false;
 
       let curpValidada = false;
       let cpValidado = false;
@@ -1627,7 +1628,7 @@
         inicializarControlBotonAtras();
       });
 
-      // ================= CONTROL DE BOTÓN / GESTO "ATRÁS" (ANDROID & iOS) =================
+      // ================= CONTROL DE BOTÓN / GESTO "ATRÁS" (ANDROID & iOS) CORREGIDO =================
       function inicializarControlBotonAtras() {
         const vistaInicial = solicitudData.vistaActual || 'vista-menu';
         try {
@@ -1640,7 +1641,13 @@
         } catch (e) {}
 
         window.addEventListener('popstate', (event) => {
-          // 1. Si el modal de la cámara está abierto, "Atrás" solo cierra la cámara sin retroceder de paso
+          // Si el popstate fue provocado por cerrar la cámara automáticamente tras éxito, lo ignoramos
+          if (ignoreNextPopState) {
+            ignoreNextPopState = false;
+            return;
+          }
+
+          // 1. Si el modal de la cámara está abierto y el usuario dio "Atrás" físicamente, solo cierra la cámara
           const modal = document.getElementById('scannerOverlayModal');
           if (modal && !modal.classList.contains('hidden')) {
             scannerHistoryPushed = false;
@@ -1648,7 +1655,7 @@
             return;
           }
 
-          // 2. Si hay una alerta de SweetAlert2 abierta, la cerramos y mantenemos la vista
+          // 2. Si hay una alerta de SweetAlert2 abierta, la cerramos y mantenemos la vista actual
           if (typeof Swal !== 'undefined' && Swal.isVisible()) {
             Swal.close();
             try {
@@ -1661,9 +1668,7 @@
 
           // 3. Si está en una vista avanzada del formulario, retrocede al paso anterior
           if (vistaAct !== 'vista-menu') {
-            const vistaAnterior = (event.state && event.state.vista && event.state.vista !== vistaAct)
-              ? event.state.vista
-              : (PREV_VIEW_MAP[vistaAct] || 'vista-menu');
+            const vistaAnterior = PREV_VIEW_MAP[vistaAct] || 'vista-menu';
 
             // Si va a regresar al menú inicial pero ya validó cuenta, preguntar para evitar pérdida accidental
             if (vistaAnterior === 'vista-menu' && solicitudData.numCliente) {
@@ -1705,6 +1710,7 @@
               confirmButtonColor: '#439859'
             }).then((res) => {
               if (!res.isConfirmed) {
+                ignoreNextPopState = true;
                 window.history.back();
               }
             });
@@ -2861,7 +2867,8 @@
         document.getElementById('scannerOverlayModal')?.classList.add('hidden');
         if (scannerHistoryPushed && !fromPopState) {
           scannerHistoryPushed = false;
-          try { window.history.back(); } catch (e) {}
+          ignoreNextPopState = true; // <- Bloquea el evento popstate para que NO retroceda de vista
+          try { window.history.back(); } catch (e) { ignoreNextPopState = false; }
         } else {
           scannerHistoryPushed = false;
         }
