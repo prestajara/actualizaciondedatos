@@ -1412,17 +1412,17 @@
     <!-- === INICIO DE LA PARTE 3 === -->
     <script>
       // ================= URL DE TU GOOGLE APPS SCRIPT =================
-      const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8tJ9uWa94w9chL3iT892ME2YoDALl5_ihIqTz3veKIMpzqgq5YzHUtxJbrITTsumBcQ/exec';
-      const SESSION_STORAGE_KEY = 'PRESTAJARA_ACTUALIZACION_STATE_V4'; 
+      const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyzr5OeVbeoZYbUD6HdW1XLppzUn3LnsnTxxql2VTq4rQguKoZnndnzvrDF_3fplVZ6cg/exec';
+      const SESSION_STORAGE_KEY = 'PRESTAJARA_ACTUALIZACION_STATE_V4';
 
       // ================= ESTADOS GLOBALES Y DATOS =================
-      let solicitudData = { 
-        email: '', numCliente: '', fechaNac: '', nombreCompleto: '', paisRegistrado: '', 
-        otpVerificado: false, // Memoria de OTP
+      let solicitudData = {
+        email: '', numCliente: '', fechaNac: '', nombreCompleto: '', paisRegistrado: '',
+        otpVerificado: false,
         nombres: '', apellidoPaterno: '', apellidoMaterno: '', sinApellidoMaterno: false, curp: '', rfc: '', sexo: '',
-        telefono: '', pais: '', estado: '', ciudad: '', colonia: '', calle: '', numeroCasa: '', numeroInterior: '', entreCalles: '', referenciasDomicilio: '', codigoPostal: '', diasContacto: '', horarioDe: '', horarioA: '', tipoCasa: '', otraCasa: '', 
-        ref1Nombre: '', ref1Apellidos: '', ref1Parentesco: '', ref1OtroParentesco: '', ref1Telefono: '', ref1Tiempo: '', ref1CalleNum: '', ref1Colonia: '', ref1CiuEst: '', 
-        ref2Nombre: '', ref2Apellidos: '', ref2Parentesco: '', ref2OtroParentesco: '', ref2Telefono: '', ref2Tiempo: '', ref2CalleNum: '', ref2Colonia: '', ref2CiuEst: '', 
+        telefono: '', pais: '', estado: '', ciudad: '', colonia: '', calle: '', numeroCasa: '', numeroInterior: '', entreCalles: '', referenciasDomicilio: '', codigoPostal: '', diasContacto: '', horarioDe: '', horarioA: '', tipoCasa: '', otraCasa: '',
+        ref1Nombre: '', ref1Apellidos: '', ref1Parentesco: '', ref1OtroParentesco: '', ref1Telefono: '', ref1Tiempo: '', ref1CalleNum: '', ref1Colonia: '', ref1CiuEst: '',
+        ref2Nombre: '', ref2Apellidos: '', ref2Parentesco: '', ref2OtroParentesco: '', ref2Telefono: '', ref2Tiempo: '', ref2CalleNum: '', ref2Colonia: '', ref2CiuEst: '',
         firma1Base64: null, firma1Url: null,
         firma1AbajoBase64: null, firma1AbajoUrl: null,
         firma1ArribaBase64: null, firma1ArribaUrl: null,
@@ -1435,12 +1435,12 @@
         navegador: '',
         vistaActual: 'vista-menu'
       };
-      
-      let textoCaptchaActual = ''; 
-      let activeCamStream = null; 
-      let activeScannerMode = null; 
+
+      let textoCaptchaActual = '';
+      let activeCamStream = null;
+      let activeScannerMode = null;
       let pendingUploads = {};
-      let isSubmitting = false; // Bloqueo de doble clic final
+      let isSubmitting = false;
 
       let curpValidada = false;
       let cpValidado = false;
@@ -1474,17 +1474,57 @@
         construirAnilloTicksSVG();
         inicializarListenersNuevos();
         inicializarSelectores();
+        inicializarEventosCamaras();
         restaurarSesionGuardada();
       });
+
+      function construirAnilloTicksSVG() {
+        const svg = document.getElementById('faceTicksSvg');
+        if (!svg) return;
+        svg.innerHTML = '';
+        const totalTicks = 60;
+        const cx = 150, cy = 150;
+        const rInner = 126, rOuter = 140;
+
+        for (let i = 0; i < totalTicks; i++) {
+          const angleDeg = i * (360 / totalTicks) - 90;
+          const rad = (angleDeg * Math.PI) / 180;
+          const x1 = cx + rInner * Math.cos(rad);
+          const y1 = cy + rInner * Math.sin(rad);
+          const x2 = cx + rOuter * Math.cos(rad);
+          const y2 = cy + rOuter * Math.sin(rad);
+
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', x1.toFixed(2));
+          line.setAttribute('y1', y1.toFixed(2));
+          line.setAttribute('x2', x2.toFixed(2));
+          line.setAttribute('y2', y2.toFixed(2));
+          line.setAttribute('class', 'tick-line');
+          line.setAttribute('data-tick-index', i);
+          svg.appendChild(line);
+        }
+      }
+
+      function soloNumeros(input) {
+        input.value = input.value.replace(/[^0-9]/g, '');
+      }
+
+      function marcarChipsBiometricosCompletos() {
+        ['chip-frente', 'chip-abajo', 'chip-arriba', 'chip-izquierda', 'chip-derecha'].forEach(id => {
+          document.getElementById(id)?.classList.add('done');
+        });
+      }
 
       // ================= UX: ENFOQUE DE ERRORES CON ANIMACIÓN =================
       function enfocarError(idElemento, mensajeAlerta = null) {
         const el = document.getElementById(idElemento);
-        if(el) {
+        if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           el.classList.add('input-error', 'shake-error');
           setTimeout(() => el.classList.remove('shake-error'), 600);
-          el.focus({ preventScroll: true });
+          if (typeof el.focus === 'function') {
+            el.focus({ preventScroll: true });
+          }
         }
         if (mensajeAlerta) {
           Swal.fire({ icon: 'warning', title: 'Atención', text: mensajeAlerta, confirmButtonColor: '#439859', returnFocus: false });
@@ -1513,9 +1553,8 @@
 
       // ================= LÓGICA DE SELECTORES Y PAÍS =================
       function inicializarSelectores() {
-        // Bloqueo de País automático si existe en DB
         const selPais = document.getElementById('pais');
-        if(selPais) {
+        if (selPais) {
           selPais.addEventListener('change', function() {
             if (!this.value) {
               this.classList.remove('input-error');
@@ -1526,7 +1565,7 @@
               const normalizadoBD = quitarAcentos(paisBD).toLowerCase();
               const normalizadoSel = quitarAcentos(this.value).toLowerCase();
               if (normalizadoSel !== normalizadoBD) {
-                this.value = ""; 
+                this.value = "";
                 enfocarError('pais', 'El país seleccionado no coincide con tu registro inicial.');
               } else {
                 this.classList.remove('input-error');
@@ -1535,11 +1574,11 @@
           });
         }
 
-        // Lógica Checkbox "Sin Apellido Materno"
         const chkNoMat = document.getElementById('chkNoApellidoMaterno');
         const inpMat = document.getElementById('apellido_materno');
         if (chkNoMat && inpMat) {
           chkNoMat.addEventListener('change', function() {
+            curpValidada = false;
             if (this.checked) {
               inpMat.value = '';
               inpMat.disabled = true;
@@ -1547,7 +1586,7 @@
               solicitudData.sinApellidoMaterno = true;
               document.getElementById('curp').disabled = document.getElementById('apellido_paterno').value.trim() === '';
             } else {
-              inpMat.disabled = false;
+              inpMat.disabled = document.getElementById('apellido_paterno').value.trim() === '';
               solicitudData.sinApellidoMaterno = false;
               document.getElementById('curp').disabled = inpMat.value.trim() === '';
             }
@@ -1555,7 +1594,6 @@
           });
         }
 
-        // Remover errores al seleccionar
         document.querySelectorAll('input[name="tipoCasa"]').forEach(r => r.addEventListener('change', () => {
           document.getElementById('tipoCasaGroup').classList.remove('input-error');
           const divOtra = document.getElementById('otraCasaTexto');
@@ -1584,21 +1622,27 @@
 
       function configurarPaisInteligente() {
         const selPais = document.getElementById('pais');
+        if (!selPais) return;
         const paisBD = (solicitudData.paisRegistrado || "").trim();
         if (paisBD) {
-          // Normaliza opciones para encontrarla aunque tenga/no tenga tilde
           const buscar = quitarAcentos(paisBD).toLowerCase();
-          let encontrado = false;
+          let valorCoincidente = null;
           Array.from(selPais.options).forEach(opt => {
-            if (quitarAcentos(opt.value).toLowerCase() === buscar) {
-              selPais.value = opt.value;
-              encontrado = true;
+            if (opt.value && quitarAcentos(opt.value).toLowerCase() === buscar) {
+              valorCoincidente = opt.value;
             }
           });
-          if (!encontrado) selPais.innerHTML += `<option value="${paisBD}">${paisBD}</option>`;
-          selPais.value = paisBD;
+          if (!valorCoincidente) {
+            const nuevaOpt = document.createElement('option');
+            nuevaOpt.value = paisBD;
+            nuevaOpt.textContent = paisBD;
+            selPais.appendChild(nuevaOpt);
+            valorCoincidente = paisBD;
+          }
+          selPais.value = valorCoincidente;
           selPais.disabled = true;
           selPais.classList.add('disabled-verified');
+          solicitudData.pais = valorCoincidente;
         } else {
           selPais.disabled = false;
           selPais.classList.remove('disabled-verified');
@@ -1613,7 +1657,7 @@
             actualizarNombreCompletoFormulario();
             const c = document.getElementById('curp').value.trim();
             const btnCurp = document.getElementById('btn_validar_curp');
-            if(btnCurp) btnCurp.disabled = c.length !== 18;
+            if (btnCurp) btnCurp.disabled = c.length !== 18;
           });
         });
 
@@ -1622,7 +1666,7 @@
         });
         document.getElementById('apellido_paterno').addEventListener('input', function() {
           const sinMat = document.getElementById('chkNoApellidoMaterno').checked;
-          if(!sinMat) document.getElementById('apellido_materno').disabled = this.value.trim() === '';
+          if (!sinMat) document.getElementById('apellido_materno').disabled = this.value.trim() === '';
           else document.getElementById('curp').disabled = this.value.trim() === '';
         });
         document.getElementById('apellido_materno').addEventListener('input', function() {
@@ -1633,7 +1677,7 @@
           cpValidado = false;
           this.value = this.value.replace(/[^0-9]/g, '');
           const btnCp = document.getElementById('btn_validar_cp');
-          if(btnCp) btnCp.disabled = this.value.length !== 5;
+          if (btnCp) btnCp.disabled = this.value.length !== 5;
           document.getElementById('colonia').disabled = true;
           document.getElementById('calle').disabled = true;
           document.getElementById('numeroCasa').disabled = true;
@@ -1650,24 +1694,23 @@
       function actualizarNombreCompletoFormulario() {
         const n = document.getElementById('nombres').value.trim();
         const p = document.getElementById('apellido_paterno').value.trim();
-        const m = document.getElementById('apellido_materno').value.trim();
-        document.getElementById('nombre_completo').value = `${n} ${p} ${m}`.trim();
+        const m = document.getElementById('chkNoApellidoMaterno')?.checked ? '' : document.getElementById('apellido_materno').value.trim();
+        document.getElementById('nombre_completo').value = `${n} ${p} ${m}`.replace(/\s+/g, ' ').trim();
       }
 
       // ================= FUNCIONES DE CURP =================
-      // Convierte Ñ a X para validación matemática según RENAPO
-      function quitarAcentos(cadena) { 
-        return cadena.toUpperCase().replace(/Ñ/g, 'X').normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
+      function quitarAcentos(cadena) {
+        return String(cadena || "").toUpperCase().replace(/Ñ/g, 'X').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       }
-      
+
       function obtenerConsonanteInterna(palabra) {
         if (!palabra || palabra.length < 2) return 'X';
         const match = palabra.substring(1).match(/[BCDFGHJKLMNPQRSTVWXYZ]/i);
         return match ? match[0].toUpperCase() : 'X';
       }
-      
+
       function procesarNombreCurp(nombreCompleto) {
-        const nombres = nombreCompleto.split(' ');
+        const nombres = nombreCompleto.trim().split(/\s+/);
         if (nombres.length > 1 && ['MARIA', 'MA.', 'MA', 'JOSE', 'J.', 'J'].includes(nombres[0])) return nombres[1];
         return nombres[0];
       }
@@ -1696,14 +1739,14 @@
       function setRadioVal(name, val) {
         if (!val) return;
         const radios = document.querySelectorAll(`input[name="${name}"]`);
-        radios.forEach(r => { if(r.value === val) r.checked = true; });
+        radios.forEach(r => { if (r.value === val) r.checked = true; });
       }
 
       function setCheckboxesVal(name, valsStr) {
         if (!valsStr) return;
         const arr = valsStr.split(',').map(s => s.trim());
         const cbs = document.querySelectorAll(`input[name="${name}"]`);
-        cbs.forEach(cb => { if(arr.includes(cb.value)) cb.checked = true; });
+        cbs.forEach(cb => { if (arr.includes(cb.value)) cb.checked = true; });
       }
 
       function restaurarSesionGuardada() {
@@ -1717,72 +1760,74 @@
 
           if (solicitudData.nombreCompleto) {
             document.querySelectorAll('.nombre-dinamico-span').forEach(el => el.textContent = solicitudData.nombreCompleto.toUpperCase());
-            configurarPaisInteligente();
           }
+          configurarPaisInteligente();
 
-          const setVal = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
-          
+          const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined && val !== null) el.value = val; };
+
           setVal('email', solicitudData.email);
           setVal('confirmEmail', solicitudData.email);
           setVal('numCliente', solicitudData.numCliente);
           setVal('fechaNacimiento', solicitudData.fechaNac);
-          
+
           setVal('nombres', solicitudData.nombres);
           setVal('apellido_paterno', solicitudData.apellidoPaterno);
-          if(solicitudData.sinApellidoMaterno) {
+          if (solicitudData.sinApellidoMaterno) {
             document.getElementById('chkNoApellidoMaterno').checked = true;
             document.getElementById('apellido_materno').disabled = true;
           } else {
             setVal('apellido_materno', solicitudData.apellidoMaterno);
           }
           setVal('curp', solicitudData.curp);
-          
-          if(solicitudData.curp) {
-              curpValidada = true;
-              document.getElementById('curp').disabled = false;
-              document.getElementById('apellido_paterno').disabled = false;
-              if(!solicitudData.sinApellidoMaterno) document.getElementById('apellido_materno').disabled = false;
-              setVal('rfc', solicitudData.rfc);
-              setVal('sexo', solicitudData.sexo);
-              actualizarNombreCompletoFormulario();
-              
-              let anio = solicitudData.curp.substring(4, 6);
-              let mes = solicitudData.curp.substring(6, 8);
-              let dia = solicitudData.curp.substring(8, 10);
-              let siglo = parseInt(anio) > 26 ? "19" : "20"; 
-              setVal('fecha_nac_calc', `${dia}/${mes}/${siglo}${anio}`);
+
+          if (solicitudData.curp) {
+            curpValidada = true;
+            document.getElementById('curp').disabled = false;
+            document.getElementById('btn_validar_curp').disabled = false;
+            document.getElementById('apellido_paterno').disabled = false;
+            if (!solicitudData.sinApellidoMaterno) document.getElementById('apellido_materno').disabled = false;
+            setVal('rfc', solicitudData.rfc);
+            setVal('sexo', solicitudData.sexo);
+            actualizarNombreCompletoFormulario();
+
+            let anio = solicitudData.curp.substring(4, 6);
+            let mes = solicitudData.curp.substring(6, 8);
+            let dia = solicitudData.curp.substring(8, 10);
+            let siglo = parseInt(anio, 10) > 26 ? "19" : "20";
+            setVal('fecha_nac_calc', `${dia}/${mes}/${siglo}${anio}`);
           }
 
           setVal('tel1', solicitudData.telefono);
           setVal('tel2', solicitudData.telefono);
           setVal('codigoPostal', solicitudData.codigoPostal);
-          if(solicitudData.codigoPostal) {
-              cpValidado = true;
-              setVal('estado', solicitudData.estado);
-              setVal('ciudad', solicitudData.ciudad);
-              setVal('calle', solicitudData.calle);
-              setVal('numeroCasa', solicitudData.numeroCasa);
-              setVal('numeroInterior', solicitudData.numeroInterior);
-              setVal('entreCalles', solicitudData.entreCalles);
-              setVal('referenciasDomicilio', solicitudData.referenciasDomicilio);
-              
-              ['calle','numeroCasa','numeroInterior','entreCalles','referenciasDomicilio'].forEach(id => document.getElementById(id).disabled = false);
-              
-              if(solicitudData.colonia) {
-                  const selCol = document.getElementById('colonia');
-                  selCol.innerHTML = `<option value="${solicitudData.colonia}">${solicitudData.colonia}</option>`;
-                  selCol.disabled = false;
-                  selCol.value = solicitudData.colonia;
-              }
+          if (solicitudData.codigoPostal) {
+            cpValidado = true;
+            document.getElementById('btn_validar_cp').disabled = false;
+            setVal('estado', solicitudData.estado);
+            setVal('ciudad', solicitudData.ciudad);
+            setVal('calle', solicitudData.calle);
+            setVal('numeroCasa', solicitudData.numeroCasa);
+            setVal('numeroInterior', solicitudData.numeroInterior);
+            setVal('entreCalles', solicitudData.entreCalles);
+            setVal('referenciasDomicilio', solicitudData.referenciasDomicilio);
+
+            ['calle', 'numeroCasa', 'numeroInterior', 'entreCalles', 'referenciasDomicilio'].forEach(id => document.getElementById(id).disabled = false);
+
+            if (solicitudData.colonia) {
+              const selCol = document.getElementById('colonia');
+              selCol.innerHTML = `<option value="${solicitudData.colonia}">${solicitudData.colonia}</option>`;
+              selCol.disabled = false;
+              selCol.value = solicitudData.colonia;
+            }
           }
 
-          if(!solicitudData.paisRegistrado) setVal('pais', solicitudData.pais);
+          if (!solicitudData.paisRegistrado && solicitudData.pais) setVal('pais', solicitudData.pais);
           setVal('horarioDe', solicitudData.horarioDe);
           setVal('horarioA', solicitudData.horarioA);
 
           setCheckboxesVal('diaContacto', solicitudData.diasContacto);
           setRadioVal('tipoCasa', solicitudData.tipoCasa);
-          if(solicitudData.tipoCasa === 'Otra') {
+          if (solicitudData.tipoCasa === 'Otra') {
             document.getElementById('otraCasaTexto').classList.remove('hidden');
             setVal('otraCasaTexto', solicitudData.otraCasa);
           }
@@ -1790,7 +1835,7 @@
           setVal('ref1Nombre', solicitudData.ref1Nombre);
           setVal('ref1Apellidos', solicitudData.ref1Apellidos);
           setRadioVal('parentesco1', solicitudData.ref1Parentesco);
-          if(solicitudData.ref1Parentesco === 'Otro') {
+          if (solicitudData.ref1Parentesco === 'Otro') {
             document.getElementById('otroParentesco1Texto').classList.remove('hidden');
             setVal('otroParentesco1Texto', solicitudData.ref1OtroParentesco);
           }
@@ -1804,7 +1849,7 @@
           setVal('ref2Nombre', solicitudData.ref2Nombre);
           setVal('ref2Apellidos', solicitudData.ref2Apellidos);
           setRadioVal('parentesco2', solicitudData.ref2Parentesco);
-          if(solicitudData.ref2Parentesco === 'Otro') {
+          if (solicitudData.ref2Parentesco === 'Otro') {
             document.getElementById('otroParentesco2Texto').classList.remove('hidden');
             setVal('otroParentesco2Texto', solicitudData.ref2OtroParentesco);
           }
@@ -1819,13 +1864,17 @@
             restaurarSlotFoto('firma1Base64', 'firma1Url', 'previewFirma1', 'exampleFirma1', 'slotFirma1', 'btnOpenCamFirma1', 'badgeFirma1');
             marcarChipsBiometricosCompletos();
           }
-          ['ineFrontal','ineTrasera','comprobante','firmaFinal'].forEach(pre => {
-             if (solicitudData[pre+'Base64'] || solicitudData[pre+'Url']) {
-               restaurarSlotFoto(pre+'Base64', pre+'Url', 'preview'+capitalize(pre), 'example'+capitalize(pre), 'slot'+capitalize(pre), 'btnOpenCam'+capitalize(pre), 'badge'+capitalize(pre));
-             }
+          ['ineFrontal', 'ineTrasera', 'comprobante', 'firmaFinal'].forEach(pre => {
+            if (solicitudData[pre + 'Base64'] || solicitudData[pre + 'Url']) {
+              restaurarSlotFoto(pre + 'Base64', pre + 'Url', 'preview' + capitalize(pre), 'example' + capitalize(pre), 'slot' + capitalize(pre), 'btnOpenCam' + capitalize(pre), 'badge' + capitalize(pre));
+            }
           });
 
           asegurarModelosFaciales();
+
+          if (solicitudData.vistaActual === 'vista-correo-manual') {
+            generarCaptcha();
+          }
           cambiarVista(solicitudData.vistaActual, false);
         } catch (e) {
           console.warn("No se pudo restaurar la sesión previa:", e);
@@ -1866,6 +1915,23 @@
       }
 
       // ================= NAVEGACIÓN Y VALIDACIÓN =================
+      function obtenerDispositivoYNavegador() {
+        var ua = navigator.userAgent;
+        var browser = "Desconocido", os = "Desconocido";
+        if (ua.match(/Android/i)) os = "Android";
+        else if (ua.match(/iPhone|iPad|iPod/i)) os = "iOS";
+        else if (ua.match(/Windows/i)) os = "Windows";
+        else if (ua.match(/Mac/i)) os = "MacOS";
+        if (ua.match(/Chrome/i) || ua.match(/CriOS/i)) browser = "Chrome";
+        else if (ua.match(/Safari/i)) browser = "Safari";
+        else if (ua.match(/Firefox/i)) browser = "Firefox";
+        return browser + " en " + os;
+      }
+
+      function verificarNavegadorYContinuar(vistaDestino) {
+        cambiarVista(vistaDestino);
+      }
+
       function cambiarVista(idVistaDestino, guardar = true) {
         cerrarCamaraGlobal();
         document.querySelectorAll('.app-container > div').forEach(div => div.classList.add('hidden'));
@@ -1908,28 +1974,34 @@
       }
 
       async function validarClienteFormulario() {
-        if (!validarCamposReq(['email', 'confirmEmail', 'numCliente', 'fechaNacimiento'])) return;
+        if (!validarCamposReq(['email', 'confirmEmail', 'numCliente', 'fechaNacimiento'], 'Llena todos los campos marcados en rojo.')) return;
 
         const email = document.getElementById('email').value.trim();
         const confirmEmail = document.getElementById('confirmEmail').value.trim();
         const numCliente = document.getElementById('numCliente').value.trim();
         const fechaNac = document.getElementById('fechaNacimiento').value;
 
-        if (email.toLowerCase() !== confirmEmail.toLowerCase()) {
-          enfocarError('confirmEmail', 'Los correos no coinciden.');
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          enfocarError('email', 'Ingresa una dirección de correo electrónico válida.');
           return;
         }
 
-        // Si ya está verificado el OTP para este mismo correo, lo pasamos directo.
-        if (solicitudData.otpVerificado && solicitudData.email.toLowerCase() === email.toLowerCase() && solicitudData.numCliente === numCliente) {
-           cambiarVista('vista-privacidad-1');
-           return;
+        if (email.toLowerCase() !== confirmEmail.toLowerCase()) {
+          enfocarError('confirmEmail', 'Los correos electrónicos no coinciden.');
+          return;
         }
+
+        const yaVerificoMismoOTP = (
+          solicitudData.otpVerificado === true &&
+          solicitudData.email.toLowerCase() === email.toLowerCase() &&
+          solicitudData.numCliente === numCliente &&
+          solicitudData.fechaNac === fechaNac
+        );
 
         solicitudData.email = email;
         solicitudData.numCliente = numCliente;
         solicitudData.fechaNac = fechaNac;
-        solicitudData.otpVerificado = false; 
 
         document.getElementById('btn-validar-cliente').classList.add('hidden');
         document.getElementById('skeleton-validacion').classList.remove('hidden');
@@ -1943,7 +2015,13 @@
             configurarPaisInteligente();
             guardarEstadoEnSesion();
             asegurarModelosFaciales();
-            await verificarOTP();
+
+            if (yaVerificoMismoOTP) {
+              cambiarVista('vista-privacidad-1');
+            } else {
+              solicitudData.otpVerificado = false;
+              await verificarOTP();
+            }
           } else {
             Swal.fire('Error', res.message, 'error');
           }
@@ -1963,11 +2041,11 @@
             generarCaptcha();
             document.getElementById('captcha-input').value = '';
             cambiarVista('vista-correo-manual');
-          } else { 
+          } else {
             document.getElementById('correo-enviar-mostrar').innerText = solicitudData.email;
             document.getElementById('paso-pedir-correo').classList.remove('hidden');
             document.getElementById('paso-ingresar-codigo').classList.add('hidden');
-            cambiarVista('vista-otp'); 
+            cambiarVista('vista-otp');
           }
         } catch (e) {
           generarCaptcha();
@@ -1980,13 +2058,14 @@
         document.getElementById('skeleton-otp-send').classList.remove('hidden');
         try {
           const res = await sendToAppScript({ action: 'enviarOTP', email: solicitudData.email });
-          if (res.status === 'success') { 
-            document.getElementById('paso-pedir-correo').classList.add('hidden'); 
-            document.getElementById('paso-ingresar-codigo').classList.remove('hidden'); 
+          if (res.status === 'success') {
+            document.getElementById('paso-pedir-correo').classList.add('hidden');
+            document.getElementById('paso-ingresar-codigo').classList.remove('hidden');
             document.getElementById('correo-mostrado').innerText = solicitudData.email;
             document.getElementById('otp-input').value = '';
           } else if (res.usarCaptcha) {
             generarCaptcha();
+            document.getElementById('captcha-input').value = '';
             cambiarVista('vista-correo-manual');
           } else {
             Swal.fire('Error', res.message, 'error');
@@ -1997,6 +2076,11 @@
           document.getElementById('btn-enviar-codigo').classList.remove('hidden');
           document.getElementById('skeleton-otp-send').classList.add('hidden');
         }
+      }
+
+      function reenviarCodigoUI() {
+        document.getElementById('paso-ingresar-codigo').classList.add('hidden');
+        document.getElementById('paso-pedir-correo').classList.remove('hidden');
       }
 
       async function confirmarOTP() {
@@ -2014,7 +2098,7 @@
             guardarEstadoEnSesion();
             cambiarVista('vista-privacidad-1');
           } else {
-            Swal.fire('Incorrecto', res.message, 'error');
+            enfocarError('otp-input', res.message);
           }
         } catch (e) {
           Swal.fire('Error', e.message, 'error');
@@ -2024,32 +2108,58 @@
         }
       }
 
+      function generarCaptcha() {
+        const canvas = document.getElementById('captchaCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+        textoCaptchaActual = '';
+        for (let i = 0; i < 6; i++) textoCaptchaActual += chars.charAt(Math.floor(Math.random() * chars.length));
+        for (let i = 0; i < 35; i++) {
+          ctx.fillStyle = `rgba(${Math.random()*200},${Math.random()*200},${Math.random()*200},0.28)`;
+          ctx.beginPath();
+          ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.font = 'bold 30px Inter, sans-serif';
+        ctx.fillStyle = '#0a3d62';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (let i = 0; i < textoCaptchaActual.length; i++) {
+          ctx.save();
+          ctx.translate(32 * i + 30, canvas.height / 2);
+          ctx.rotate((Math.random() - 0.5) * 0.45);
+          ctx.fillText(textoCaptchaActual[i], 0, 0);
+          ctx.restore();
+        }
+      }
+
       function validarCaptchaLocal() {
         const cap = document.getElementById('captcha-input').value.trim();
-        if (cap.toUpperCase() !== textoCaptchaActual.toUpperCase()) { 
-          enfocarError('captcha-input', 'El código de la imagen no coincide.');
+        if (!cap || cap.toUpperCase() !== textoCaptchaActual.toUpperCase()) {
           document.getElementById('captcha-input').value = '';
           generarCaptcha();
-          return; 
+          enfocarError('captcha-input', 'El código de la imagen no coincide.');
+          return;
         }
-        solicitudData.otpVerificado = false; // El captcha no es OTP
+        solicitudData.otpVerificado = false;
         cambiarVista('vista-privacidad-1');
       }
 
       // ================= VALIDACIÓN CURP =================
       async function procesarCURP() {
         const curp = document.getElementById('curp').value.trim().toUpperCase();
-        if(curp.length !== 18) {
+        if (curp.length !== 18) {
           enfocarError('curp', 'La CURP debe tener exactamente 18 caracteres.');
           return;
         }
 
-        // Lógica Matemática
         document.getElementById('rfc').value = curp.substring(0, 10);
         let anio = curp.substring(4, 6);
         let mes = curp.substring(6, 8);
         let dia = curp.substring(8, 10);
-        let siglo = parseInt(anio) > 26 ? "19" : "20"; 
+        let siglo = parseInt(anio, 10) > 26 ? "19" : "20";
         document.getElementById('fecha_nac_calc').value = `${dia}/${mes}/${siglo}${anio}`;
         const sexoCurp = curp.charAt(10);
         document.getElementById('sexo').value = sexoCurp === 'M' ? 'MUJER' : 'HOMBRE';
@@ -2058,30 +2168,31 @@
         const p = quitarAcentos(document.getElementById('apellido_paterno').value);
         let m = 'X';
         if (!document.getElementById('chkNoApellidoMaterno').checked) {
-          m = quitarAcentos(document.getElementById('apellido_materno').value);
+          const matInput = quitarAcentos(document.getElementById('apellido_materno').value);
+          if (matInput) m = matInput;
         }
-        
-        const l1 = p.charAt(0);
+
+        const l1 = p.charAt(0) || 'X';
         let vP = p.substring(1).search(/[AEIOU]/);
         const l2 = vP !== -1 ? p.charAt(vP + 1) : 'X';
-        const l3 = m.charAt(0);
-        const l4 = n.charAt(0);
+        const l3 = m !== 'X' ? m.charAt(0) : 'X';
+        const l4 = n.charAt(0) || 'X';
         const c1 = obtenerConsonanteInterna(p);
-        const c2 = obtenerConsonanteInterna(m);
+        const c2 = m !== 'X' ? obtenerConsonanteInterna(m) : 'X';
         const c3 = obtenerConsonanteInterna(n);
 
         const iniciales = l1 + l2 + l3 + l4;
         const complementos = sexoCurp + curp.substring(11, 13) + c1 + c2 + c3;
 
-        if (curp.substring(0, 4) !== iniciales || curp.substring(4, 10) !== (anio+mes+dia) || curp.substring(10, 16) !== complementos) {
+        if (curp.substring(0, 4) !== iniciales || curp.substring(4, 10) !== (anio + mes + dia) || curp.substring(10, 16) !== complementos) {
           curpValidada = false;
-          enfocarError('curp', 'La CURP no coincide matemáticamente con tus datos. Verifícala.');
-          return; 
+          enfocarError('curp', 'La CURP no coincide matemáticamente con tus datos (Nombres y Fecha). Verifícala.');
+          return;
         }
 
         document.getElementById('btn_validar_curp').classList.add('hidden');
         document.getElementById('skeleton-curp').classList.remove('hidden');
-        
+
         try {
           const res = await sendToAppScript({
             action: 'validarCURP',
@@ -2091,7 +2202,7 @@
             apellidoPaterno: document.getElementById('apellido_paterno').value.trim(),
             apellidoMaterno: document.getElementById('chkNoApellidoMaterno').checked ? '' : document.getElementById('apellido_materno').value.trim()
           });
-          
+
           if (res.success) {
             curpValidada = true;
             solicitudData.nombres = document.getElementById('nombres').value.trim();
@@ -2100,14 +2211,14 @@
             solicitudData.curp = curp;
             solicitudData.rfc = document.getElementById('rfc').value;
             solicitudData.sexo = document.getElementById('sexo').value;
-            
+
             Swal.fire({ title: '¡Identidad Confirmada!', text: res.message, icon: 'success', timer: 2000, showConfirmButton: false });
             guardarEstadoEnSesion();
           } else {
             curpValidada = false;
             enfocarError('curp', res.message);
           }
-        } catch(e) {
+        } catch (e) {
           Swal.fire('Error', 'No se pudo conectar con el servidor: ' + e.message, 'error');
         } finally {
           document.getElementById('btn_validar_curp').classList.remove('hidden');
@@ -2118,28 +2229,28 @@
       // ================= VALIDACIÓN DE CÓDIGO POSTAL =================
       async function validarCP() {
         const cp = document.getElementById('codigoPostal').value.trim();
-        if(cp.length !== 5) {
+        if (cp.length !== 5) {
           enfocarError('codigoPostal', 'El Código Postal debe tener 5 dígitos.');
           return;
         }
-        
+
         document.getElementById('btn_validar_cp').classList.add('hidden');
         document.getElementById('skeleton-cp').classList.remove('hidden');
         try {
           const res = await sendToAppScript({ action: 'consultarCP', cp: cp });
-          
-          if(res.success) {
+
+          if (res.success) {
             cpValidado = true;
             document.getElementById('estado').value = res.estado.toUpperCase();
             document.getElementById('ciudad').value = res.municipio.toUpperCase();
-            
+
             const sel = document.getElementById('colonia');
             sel.innerHTML = '<option value="">Selecciona tu colonia...</option>';
             res.colonias.forEach(col => { sel.innerHTML += `<option value="${col.toUpperCase()}">${col.toUpperCase()}</option>`; });
-            
+
             sel.disabled = false;
-            ['calle','numeroCasa','numeroInterior','entreCalles','referenciasDomicilio'].forEach(id => document.getElementById(id).disabled = false);
-            
+            ['calle', 'numeroCasa', 'numeroInterior', 'entreCalles', 'referenciasDomicilio'].forEach(id => document.getElementById(id).disabled = false);
+
             solicitudData.codigoPostal = cp;
             solicitudData.estado = res.estado.toUpperCase();
             solicitudData.ciudad = res.municipio.toUpperCase();
@@ -2148,7 +2259,7 @@
             cpValidado = false;
             enfocarError('codigoPostal', res.message);
           }
-        } catch(e) {
+        } catch (e) {
           Swal.fire('Error', 'Problema de conexión al buscar el C.P: ' + e.message, 'error');
         } finally {
           document.getElementById('btn_validar_cp').classList.remove('hidden');
@@ -2166,40 +2277,45 @@
       }
 
       function avanzarDatosContacto() {
+        let camposReq = ['nombres', 'apellido_paterno'];
+        if (!document.getElementById('chkNoApellidoMaterno').checked) camposReq.push('apellido_materno');
+        camposReq.push('curp');
+
+        if (!validarCamposReq(camposReq, 'Llena todos tus datos personales.')) return;
+
         if (!curpValidada) {
-          enfocarError('curp', 'Presiona "Validar" en tu CURP para confirmar tu identidad.');
+          enfocarError('curp', 'Presiona el botón "Validar" junto a tu CURP para confirmar tu identidad.');
           return;
         }
-        let camposReq = ['nombres', 'apellido_paterno', 'curp'];
-        if (!document.getElementById('chkNoApellidoMaterno').checked) camposReq.push('apellido_materno');
-        if (!validarCamposReq(camposReq, 'Llena todos tus datos personales.')) return;
-        
+
         cambiarVista('vista-datos-contacto');
       }
 
       function avanzarDocumentos() {
-        if (!validarCamposReq(['tel1', 'tel2', 'pais', 'codigoPostal', 'estado', 'ciudad', 'colonia', 'calle', 'numeroCasa', 'entreCalles', 'referenciasDomicilio', 'horarioDe', 'horarioA'])) return;
-        
+        if (!validarCamposReq(['tel1', 'tel2', 'pais', 'codigoPostal'])) return;
+
         const tel1 = document.getElementById('tel1');
         const tel2 = document.getElementById('tel2');
         if (tel1.value.length < 10) return enfocarError('tel1', 'El número telefónico debe tener 10 dígitos.');
         if (tel1.value !== tel2.value) return enfocarError('tel2', 'Los teléfonos no coinciden.');
-        
-        if (!cpValidado) return enfocarError('codigoPostal', 'Valida tu Código Postal antes de continuar.');
+
+        if (!cpValidado) return enfocarError('codigoPostal', 'Presiona "Validar" en tu Código Postal antes de continuar.');
+
+        if (!validarCamposReq(['colonia', 'calle', 'numeroCasa', 'entreCalles', 'referenciasDomicilio'])) return;
+
+        const diasChecked = Array.from(document.querySelectorAll('input[name="diaContacto"]:checked'));
+        if (diasChecked.length === 0) {
+          return enfocarError('diasContactoGroup', 'Selecciona al menos un día de contacto.');
+        }
+
+        if (!validarCamposReq(['horarioDe', 'horarioA'])) return;
 
         const hDe = document.getElementById('horarioDe');
         const hA = document.getElementById('horarioA');
         if (hDe.value === hA.value) return enfocarError('horarioA', 'El horario de inicio y fin no pueden ser iguales.');
 
-        const diasChecked = Array.from(document.querySelectorAll('input[name="diaContacto"]:checked'));
-        if (diasChecked.length === 0) {
-          document.getElementById('diasContactoGroup').classList.add('input-error');
-          return enfocarError('diasContactoGroup', 'Selecciona al menos un día de contacto.');
-        }
-
         const rCasa = document.querySelector('input[name="tipoCasa"]:checked');
         if (!rCasa) {
-          document.getElementById('tipoCasaGroup').classList.add('input-error');
           return enfocarError('tipoCasaGroup', 'Indica la situación de tu vivienda.');
         }
 
@@ -2230,42 +2346,40 @@
         if (!solicitudData.ineFrontalBase64 && !solicitudData.ineFrontalUrl) return enfocarError('slotIneFrontal', 'Captura la parte frontal de tu INE.');
         if (!solicitudData.ineTraseraBase64 && !solicitudData.ineTraseraUrl) return enfocarError('slotIneTrasera', 'Captura la parte trasera de tu INE.');
         if (!solicitudData.comprobanteBase64 && !solicitudData.comprobanteUrl) return enfocarError('slotComprobante', 'Captura tu comprobante de domicilio.');
-        
+
         cambiarVista('vista-referencias');
       }
 
       function avanzarPrivacidadFinal() {
-        if (!validarCamposReq(['ref1Nombre', 'ref1Apellidos', 'ref1Telefono', 'ref1TelefonoConfirm', 'ref1Tiempo', 'ref1CalleNum', 'ref1Colonia', 'ref1CiudadEstado', 'ref2Nombre', 'ref2Apellidos', 'ref2Telefono', 'ref2TelefonoConfirm', 'ref2Tiempo', 'ref2CalleNum', 'ref2Colonia', 'ref2CiudadEstado'])) return;
+        if (!validarCamposReq(['ref1Nombre', 'ref1Apellidos'])) return;
 
-        const r1Par = document.querySelector('input[name="parentesco1"]:checked'); 
-        const r2Par = document.querySelector('input[name="parentesco2"]:checked');
-        
-        if (!r1Par) {
-          document.getElementById('parentesco1Group').classList.add('input-error');
-          return enfocarError('parentesco1Group', 'Selecciona el parentesco de tu Referencia 1.');
-        }
-        if (r1Par.value === 'Otro' && !document.getElementById('otroParentesco1Texto').value.trim()) return enfocarError('otroParentesco1Texto', 'Especifica el parentesco.');
+        const r1Par = document.querySelector('input[name="parentesco1"]:checked');
+        if (!r1Par) return enfocarError('parentesco1Group', 'Selecciona el parentesco de tu Referencia 1.');
+        if (r1Par.value === 'Otro' && !document.getElementById('otroParentesco1Texto').value.trim()) return enfocarError('otroParentesco1Texto', 'Especifica el parentesco de tu Referencia 1.');
 
-        if (!r2Par) {
-          document.getElementById('parentesco2Group').classList.add('input-error');
-          return enfocarError('parentesco2Group', 'Selecciona el parentesco de tu Referencia 2.');
-        }
-        if (r2Par.value === 'Otro' && !document.getElementById('otroParentesco2Texto').value.trim()) return enfocarError('otroParentesco2Texto', 'Especifica el parentesco.');
+        if (!validarCamposReq(['ref1Telefono', 'ref1TelefonoConfirm', 'ref1Tiempo', 'ref1CalleNum', 'ref1Colonia', 'ref1CiudadEstado'])) return;
 
-        const r1Tel = document.getElementById('ref1Telefono'); 
+        const r1Tel = document.getElementById('ref1Telefono');
         const r1TelConf = document.getElementById('ref1TelefonoConfirm');
-        const r2Tel = document.getElementById('ref2Telefono'); 
-        const r2TelConf = document.getElementById('ref2TelefonoConfirm');
-
-        if (r1Tel.value.length < 10) return enfocarError('ref1Telefono', 'El teléfono debe tener 10 dígitos.');
-        if (r2Tel.value.length < 10) return enfocarError('ref2Telefono', 'El teléfono debe tener 10 dígitos.');
-
+        if (r1Tel.value.length < 10) return enfocarError('ref1Telefono', 'El teléfono de la Referencia 1 debe tener 10 dígitos.');
         if (r1Tel.value !== r1TelConf.value) return enfocarError('ref1TelefonoConfirm', 'Los teléfonos de la Referencia 1 no coinciden.');
+
+        if (!validarCamposReq(['ref2Nombre', 'ref2Apellidos'])) return;
+
+        const r2Par = document.querySelector('input[name="parentesco2"]:checked');
+        if (!r2Par) return enfocarError('parentesco2Group', 'Selecciona el parentesco de tu Referencia 2.');
+        if (r2Par.value === 'Otro' && !document.getElementById('otroParentesco2Texto').value.trim()) return enfocarError('otroParentesco2Texto', 'Especifica el parentesco de tu Referencia 2.');
+
+        if (!validarCamposReq(['ref2Telefono', 'ref2TelefonoConfirm', 'ref2Tiempo', 'ref2CalleNum', 'ref2Colonia', 'ref2CiudadEstado'])) return;
+
+        const r2Tel = document.getElementById('ref2Telefono');
+        const r2TelConf = document.getElementById('ref2TelefonoConfirm');
+        if (r2Tel.value.length < 10) return enfocarError('ref2Telefono', 'El teléfono de la Referencia 2 debe tener 10 dígitos.');
         if (r2Tel.value !== r2TelConf.value) return enfocarError('ref2TelefonoConfirm', 'Los teléfonos de la Referencia 2 no coinciden.');
 
-        if (r1Tel.value === solicitudData.telefono || r2Tel.value === solicitudData.telefono || r1Tel.value === r2Tel.value) {
-          return enfocarError('ref1Telefono', 'Los números de referencias deben ser distintos entre sí y distintos a tu propio número.');
-        }
+        if (r1Tel.value === solicitudData.telefono) return enfocarError('ref1Telefono', 'El teléfono de la Referencia 1 no puede ser igual a tu propio número.');
+        if (r2Tel.value === solicitudData.telefono) return enfocarError('ref2Telefono', 'El teléfono de la Referencia 2 no puede ser igual a tu propio número.');
+        if (r1Tel.value === r2Tel.value) return enfocarError('ref2Telefono', 'Los números telefónicos de tus dos referencias deben ser distintos entre sí.');
 
         solicitudData.ref1Nombre = document.getElementById('ref1Nombre').value.trim();
         solicitudData.ref1Apellidos = document.getElementById('ref1Apellidos').value.trim();
@@ -2288,78 +2402,6 @@
         solicitudData.ref2CiuEst = document.getElementById('ref2CiudadEstado').value.trim();
 
         cambiarVista('vista-privacidad-final');
-      }
-
-      // ================= ENVÍO FINAL PROTEGIDO =================
-      async function enviarActualizacionFinal() {
-        if (!solicitudData.firmaFinalBase64 && !solicitudData.firmaFinalUrl) return enfocarError('slotFirmaFinal', 'Toma tu selfie de cierre para finalizar.');
-        if (isSubmitting) return;
-
-        isSubmitting = true;
-        document.getElementById('btn-enviar-final').classList.add('hidden');
-        document.getElementById('skeleton-envio-final').classList.remove('hidden');
-        solicitudData.navegador = obtenerDispositivoYNavegador();
-
-        try {
-          const promesasPendientes = Object.values(pendingUploads);
-          if (promesasPendientes.length > 0) {
-            await Promise.allSettled(promesasPendientes);
-          }
-
-          const payloadFinal = {
-            ...solicitudData,
-            firma1Base64:          solicitudData.firma1Url          ? null : solicitudData.firma1Base64,
-            firma1ArribaBase64:    solicitudData.firma1ArribaUrl    ? null : solicitudData.firma1ArribaBase64,
-            firma1AbajoBase64:     solicitudData.firma1AbajoUrl     ? null : solicitudData.firma1AbajoBase64,
-            firma1IzquierdaBase64: solicitudData.firma1IzquierdaUrl ? null : solicitudData.firma1IzquierdaBase64,
-            firma1DerechaBase64:   solicitudData.firma1DerechaUrl   ? null : solicitudData.firma1DerechaBase64,
-            ineFrontalBase64:      solicitudData.ineFrontalUrl      ? null : solicitudData.ineFrontalBase64,
-            ineTraseraBase64:      solicitudData.ineTraseraUrl      ? null : solicitudData.ineTraseraBase64,
-            comprobanteBase64:     solicitudData.comprobanteUrl     ? null : solicitudData.comprobanteBase64,
-            firmaFinalBase64:      solicitudData.firmaFinalUrl      ? null : solicitudData.firmaFinalBase64
-          };
-
-          const res = await sendToAppScript({ action: 'guardarActualizacion', formData: payloadFinal });
-          if (res.success) {
-            limpiarEstadoSesion();
-            Swal.fire({
-              icon: 'success',
-              title: '¡Proceso Terminado!',
-              text: 'Toda tu información y firma biométrica han sido guardadas correctamente.',
-              confirmButtonColor: '#439859',
-              allowOutsideClick: false 
-            }).then(() => {
-              window.top.location.href = "https://prestajara.github.io/saldos/";
-            });
-          } else {
-            Swal.fire('Error', res.message, 'error');
-            document.getElementById('btn-enviar-final').classList.remove('hidden');
-            document.getElementById('skeleton-envio-final').classList.add('hidden');
-            isSubmitting = false;
-          }
-        } catch (e) {
-          Swal.fire('Error', 'Problema de conexión con el servidor. Intenta presionar Finalizar nuevamente.', 'error');
-          document.getElementById('btn-enviar-final').classList.remove('hidden');
-          document.getElementById('skeleton-envio-final').classList.add('hidden');
-          isSubmitting = false;
-        }
-      }
-
-      function obtenerDispositivoYNavegador() {
-        var ua = navigator.userAgent;
-        var browser = "Desconocido", os = "Desconocido";
-        if (ua.match(/Android/i)) os = "Android";
-        else if (ua.match(/iPhone|iPad|iPod/i)) os = "iOS";
-        else if (ua.match(/Windows/i)) os = "Windows";
-        else if (ua.match(/Mac/i)) os = "MacOS";
-        if (ua.match(/Chrome/i) || ua.match(/CriOS/i)) browser = "Chrome";
-        else if (ua.match(/Safari/i)) browser = "Safari";
-        else if (ua.match(/Firefox/i)) browser = "Firefox";
-        return browser + " en " + os;
-      }
-
-      function verificarNavegadorYContinuar(vistaDestino) {
-        cambiarVista(vistaDestino);
       }
 
       // ================= COMPRESIÓN Y SUBIDA EN SEGUNDO PLANO =================
@@ -2432,7 +2474,7 @@
       ];
       let currentBioStepIndex = 0;
       let bioHoldCounter = 0;
-      let neutralNoseRatioY = null; 
+      let neutralNoseRatioY = null;
 
       function actualizarTicksAnillo(activeIndices = [], completedIndices = [], allGreen = false) {
         const lines = document.querySelectorAll('#faceTicksSvg .tick-line');
@@ -2625,7 +2667,7 @@
               if (cumplePose) {
                 bioHoldCounter++;
                 if (bioHoldCounter >= 2) {
-                  if (pasoActual.key === 'frente') neutralNoseRatioY = pitchRatio; 
+                  if (pasoActual.key === 'frente') neutralNoseRatioY = pitchRatio;
                   const frameB64 = extraerFrameSelfieBase64(video, 920);
                   solicitudData[pasoActual.propB64] = frameB64;
                   document.getElementById(pasoActual.chipId)?.classList.add('done');
@@ -2642,7 +2684,7 @@
       }
 
       function finalizarExitoBiometrico5Pasos() {
-        isDetectionRunning = false; actualizarTicksAnillo([], [], true); 
+        isDetectionRunning = false; actualizarTicksAnillo([], [], true);
         document.getElementById('faceCircleViewport').classList.add('ready-green');
         document.getElementById('faceFloatingPill').classList.add('hidden');
         document.getElementById('faceSuccessCover').classList.add('show');
@@ -2771,31 +2813,35 @@
         abrirEscannerInmersivo(tipo, fallback);
       }
 
-      // Asignar Eventos a Botones de Fallback de Cámara Manual
-      document.addEventListener("DOMContentLoaded", () => {
+      function inicializarEventosCamaras() {
         const btnOpenCamFirma1 = document.getElementById('btnOpenCamFirma1');
         if (btnOpenCamFirma1) btnOpenCamFirma1.addEventListener('click', () => abrirEscannerInmersivo('bio5', 'fileFirma1Fallback'));
-        
+
         const fileFirma1Fallback = document.getElementById('fileFirma1Fallback');
         if (fileFirma1Fallback) fileFirma1Fallback.addEventListener('change', (e) => manejarArchivo(e, 'firma1Base64', 'firma1Url', 'Firma_Inicial_Frente', 'previewFirma1', 'exampleFirma1', 'slotFirma1', 'btnOpenCamFirma1', 'badgeFirma1'));
 
         const btnOpenCamFirmaFinal = document.getElementById('btnOpenCamFirmaFinal');
         if (btnOpenCamFirmaFinal) btnOpenCamFirmaFinal.addEventListener('click', () => abrirEscannerInmersivo('selfieFinal', 'fileFirmaFinalFallback'));
-        
+
         const fileFirmaFinalFallback = document.getElementById('fileFirmaFinalFallback');
         if (fileFirmaFinalFallback) fileFirmaFinalFallback.addEventListener('change', (e) => manejarArchivo(e, 'firmaFinalBase64', 'firmaFinalUrl', 'Firma_Final', 'previewFirmaFinal', 'exampleFirmaFinal', 'slotFirmaFinal', 'btnOpenCamFirmaFinal', 'badgeFirmaFinal'));
 
         const btnManualCaptureScanner = document.getElementById('btnManualCaptureScanner');
         if (btnManualCaptureScanner) {
           btnManualCaptureScanner.addEventListener('click', () => {
-            if (['frontal', 'trasera', 'comprobante'].includes(activeScannerMode)) capturarDocumentoActualDesdeModal();
-            else if (activeScannerMode === 'selfieFinal') {
-              const video = document.getElementById('videoScannerFace'); const dataUrl = extraerFrameSelfieBase64(video, 1000);
+            if (['frontal', 'trasera', 'comprobante'].includes(activeScannerMode)) {
+              capturarDocumentoActualDesdeModal();
+            } else if (activeScannerMode === 'selfieFinal') {
+              const video = document.getElementById('videoScannerFace');
+              const dataUrl = extraerFrameSelfieBase64(video, 1000);
               guardarUIFoto('firmaFinalBase64', 'firmaFinalUrl', 'Firma_Final', dataUrl, 'previewFirmaFinal', 'exampleFirmaFinal', 'slotFirmaFinal', 'btnOpenCamFirmaFinal', 'badgeFirmaFinal');
               cerrarCamaraGlobal();
             } else if (activeScannerMode === 'bio5') {
-              const video = document.getElementById('videoScannerFace'); const frameB64 = extraerFrameSelfieBase64(video, 920);
-              solicitudData.firma1Base64 = frameB64; marcarChipsBiometricosCompletos(); dispararSubidaSegundoPlano('firma1Base64', 'firma1Url', 'Firma_Inicial_Frente', 'badgeFirma1');
+              const video = document.getElementById('videoScannerFace');
+              const frameB64 = extraerFrameSelfieBase64(video, 920);
+              solicitudData.firma1Base64 = frameB64;
+              marcarChipsBiometricosCompletos();
+              dispararSubidaSegundoPlano('firma1Base64', 'firma1Url', 'Firma_Inicial_Frente', 'badgeFirma1');
               finalizarExitoBiometrico5Pasos();
             }
           });
@@ -2803,15 +2849,69 @@
 
         const fileIneFrontalFallback = document.getElementById('fileIneFrontalFallback');
         if (fileIneFrontalFallback) fileIneFrontalFallback.addEventListener('change', (e) => manejarArchivo(e, 'ineFrontalBase64', 'ineFrontalUrl', 'INE_Frontal', 'previewIneFrontal', 'exampleIneFrontal', 'slotIneFrontal', 'btnOpenCamIneFrontal', 'badgeIneFrontal'));
-        
+
         const fileIneTraseraFallback = document.getElementById('fileIneTraseraFallback');
         if (fileIneTraseraFallback) fileIneTraseraFallback.addEventListener('change', (e) => manejarArchivo(e, 'ineTraseraBase64', 'ineTraseraUrl', 'INE_Trasera', 'previewIneTrasera', 'exampleIneTrasera', 'slotIneTrasera', 'btnOpenCamIneTrasera', 'badgeIneTrasera'));
-        
+
         const fileComprobanteFallback = document.getElementById('fileComprobanteFallback');
         if (fileComprobanteFallback) fileComprobanteFallback.addEventListener('change', (e) => manejarArchivo(e, 'comprobanteBase64', 'comprobanteUrl', 'Comprobante', 'previewComprobante', 'exampleComprobante', 'slotComprobante', 'btnOpenCamComprobante', 'badgeComprobante'));
-      });
+      }
 
+      // ================= ENVÍO FINAL PROTEGIDO =================
+      async function enviarActualizacionFinal() {
+        if (!solicitudData.firmaFinalBase64 && !solicitudData.firmaFinalUrl) return enfocarError('slotFirmaFinal', 'Toma tu selfie de cierre para finalizar.');
+        if (isSubmitting) return;
+
+        isSubmitting = true;
+        document.getElementById('btn-enviar-final').classList.add('hidden');
+        document.getElementById('skeleton-envio-final').classList.remove('hidden');
+        solicitudData.navegador = obtenerDispositivoYNavegador();
+
+        try {
+          const promesasPendientes = Object.values(pendingUploads);
+          if (promesasPendientes.length > 0) {
+            await Promise.allSettled(promesasPendientes);
+          }
+
+          const payloadFinal = {
+            ...solicitudData,
+            firma1Base64:          solicitudData.firma1Url          ? null : solicitudData.firma1Base64,
+            firma1ArribaBase64:    solicitudData.firma1ArribaUrl    ? null : solicitudData.firma1ArribaBase64,
+            firma1AbajoBase64:     solicitudData.firma1AbajoUrl     ? null : solicitudData.firma1AbajoBase64,
+            firma1IzquierdaBase64: solicitudData.firma1IzquierdaUrl ? null : solicitudData.firma1IzquierdaBase64,
+            firma1DerechaBase64:   solicitudData.firma1DerechaUrl   ? null : solicitudData.firma1DerechaBase64,
+            ineFrontalBase64:      solicitudData.ineFrontalUrl      ? null : solicitudData.ineFrontalBase64,
+            ineTraseraBase64:      solicitudData.ineTraseraUrl      ? null : solicitudData.ineTraseraBase64,
+            comprobanteBase64:     solicitudData.comprobanteUrl     ? null : solicitudData.comprobanteBase64,
+            firmaFinalBase64:      solicitudData.firmaFinalUrl      ? null : solicitudData.firmaFinalBase64
+          };
+
+          const res = await sendToAppScript({ action: 'guardarActualizacion', formData: payloadFinal });
+          if (res.success) {
+            limpiarEstadoSesion();
+            Swal.fire({
+              icon: 'success',
+              title: '¡Proceso Terminado!',
+              text: 'Toda tu información y firma biométrica han sido guardadas correctamente.',
+              confirmButtonColor: '#439859',
+              allowOutsideClick: false
+            }).then(() => {
+              window.top.location.href = "https://prestajara.github.io/saldos/";
+            });
+          } else {
+            Swal.fire('Error', res.message, 'error');
+            document.getElementById('btn-enviar-final').classList.remove('hidden');
+            document.getElementById('skeleton-envio-final').classList.add('hidden');
+            isSubmitting = false;
+          }
+        } catch (e) {
+          Swal.fire('Error', 'Problema de conexión con el servidor. Intenta presionar Finalizar nuevamente.', 'error');
+          document.getElementById('btn-enviar-final').classList.remove('hidden');
+          document.getElementById('skeleton-envio-final').classList.add('hidden');
+          isSubmitting = false;
+        }
+      }
     </script>
   </body>
 </html>
-<!-- === FIN DE LA PARTE 3: ENSAMBLA LAS 3 PARTES PARA OBTENER TU INDEX.HTML COMPLETO === -->
+<!-- === FIN DE LA PARTE 3 === -->
